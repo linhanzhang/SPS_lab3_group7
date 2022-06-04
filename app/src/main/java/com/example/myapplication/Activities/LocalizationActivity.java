@@ -57,7 +57,7 @@ public class LocalizationActivity extends AppCompatActivity implements SensorEve
     private boolean ignore;
     private int countdown;
     private double prevY;
-    private double threshold = 0.5;
+    private double threshold = 0;
     private SeekBar seek;
 
     @Override
@@ -195,7 +195,7 @@ public class LocalizationActivity extends AppCompatActivity implements SensorEve
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress,boolean fromUser) {
                 threshold = ((double)seek.getProgress()) * 0.02;
-                thresholdView.setText("Threshold: "+ threshold);
+                //thresholdView.setText("Threshold: "+ threshold);
             }
         });
 
@@ -259,6 +259,15 @@ public class LocalizationActivity extends AppCompatActivity implements SensorEve
                     step++;
                     textStep.setText("Step: " + step);
                     ignore = true;
+
+                    getLayoutCanvas();
+                    Log.d("step>2","step>2");
+                    //canvas.drawColor(Color.WHITE);
+                    //layout.drawLayout(canvas);
+                    getLayoutCanvas();
+
+                    pc.moveParticles(canvas, (int)Cell.mapMeterToPixel(stepDistance), currentDirection);  //ATTENTION: to be changed
+                    //pc.drawParticleCollection(canvas);
                 }
                 prevY = gravity[1];
             }
