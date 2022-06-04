@@ -7,11 +7,16 @@ import android.graphics.drawable.shapes.OvalShape;
 import android.graphics.drawable.shapes.RectShape;
 import android.util.Log;
 
-public class Particle {
+import androidx.versionedparcelable.ParcelImpl;
+
+import java.util.Collection;
+import java.util.Collections;
+
+public class Particle implements Comparable<Particle> {
 
     public int x;
     public int y;
-    public float weight;
+    public int weight;
     public boolean alive;
     public ShapeDrawable drawable;
     /**
@@ -19,11 +24,12 @@ public class Particle {
      */
     public int cell;
 
-    public Particle(int x, int y, int cell){
+    public Particle(int x, int y, int cell) {
         this.x = x;
         this.y = y;
         this.cell = cell;
         this.alive = true;
+        this.weight = 0;
         drawable = new ShapeDrawable(new OvalShape());
     }
 
@@ -45,6 +51,11 @@ public class Particle {
         drawable.setBounds(x,y,x+3,y+3);
         drawable.draw(canvas);
 
+    }
+
+    @Override
+    public int compareTo(Particle p) {
+        return Integer.compare(this.weight, p.weight);
     }
 
 

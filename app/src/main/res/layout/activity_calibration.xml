@@ -1,96 +1,141 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".Activities.CalibrationActivity">
-
-    <TextView
-        android:id="@+id/textViewInstruction"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:baselineAligned="false"
-        android:textSize="18dp"
-        android:layout_marginTop="10dp"
-        android:layout_marginLeft="10dp"
-        android:layout_marginRight="10dp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.67"
-        app:layout_constraintStart_toStartOf="parent"
-        tools:layout_conversion_absoluteHeight="43dp"
-        tools:layout_conversion_absoluteWidth="484dp"
-        tools:layout_editor_absoluteY="69dp" />
-
-    <TextView
-        android:id="@+id/textViewStep"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="20dp"
-        android:textSize="20dp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.472"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/textViewInstruction"
-        tools:layout_conversion_absoluteHeight="19dp"
-        tools:layout_conversion_absoluteWidth="380dp" />
-
-    <TextView
-        android:id="@+id/textViewOrientation"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textSize="20dp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.651"
-        app:layout_constraintTop_toBottomOf="@+id/textViewInstruction"
-        app:layout_constraintLeft_toRightOf="@+id/textViewInstruction"
-        app:layout_constraintBottom_toTopOf="@id/buttonStart"
-        app:layout_constraintRight_toLeftOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        tools:layout_conversion_absoluteHeight="19dp"
-        tools:layout_conversion_absoluteWidth="380dp"
-        tools:layout_editor_absoluteY="113dp" />
-
-    <Button
-        android:id="@+id/buttonStart"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:text="Start calibration"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.576"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/textViewStep"
-        tools:layout_conversion_absoluteHeight="48dp"
-        tools:layout_conversion_absoluteWidth="136dp" />
-
-    <Button
-        android:id="@+id/buttonEnd"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="20dp"
-        android:text="End calibration"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.573"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/buttonStart"
-        tools:layout_conversion_absoluteHeight="48dp"
-        tools:layout_conversion_absoluteWidth="145dp" />
-
-    <Button
-        android:id="@+id/buttonReturn"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="20dp"
-        android:text="Go back to main menu"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.573"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/buttonEnd"
-        app:layout_constraintVertical_bias="0.0"
-        tools:layout_conversion_absoluteHeight="48dp"
-        tools:layout_conversion_absoluteWidth="145dp" />
+    android:orientation="horizontal"
+    tools:context=".Activities.LocalizationActivity" >
 
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+    <LinearLayout
+        android:layout_width="120dp"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:background="@color/light_green"
+        android:layout_weight="1">
+
+            <TextView
+                android:id="@+id/textViewInstruction"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_vertical"
+                android:text="walk from the left side to right side of corridor"
+                android:layout_weight="1"
+                android:paddingBottom="10dp"
+                android:textColor="#000000"
+                android:textSize="26dp" />
+            <TextView
+                android:id="@+id/textViewStep"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_vertical"
+                android:text="Step:"
+                android:layout_weight="1"
+                android:paddingBottom="10dp"
+                android:textColor="#000000"
+                android:textSize="26dp" />
+
+
+
+
+            <Button
+                android:id="@+id/buttonStartCalibStep"
+                android:layout_width="220dp"
+                android:layout_height="44dp"
+                android:text="Start walking" />
+
+            <Button
+                android:id="@+id/buttonEndCalibStep"
+                android:layout_width="220dp"
+                android:layout_height="44dp"
+                android:text="End Walking" />
+
+
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="120dp"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:background="@color/light_green"
+        android:layout_weight="1">
+
+        <TextView
+            android:id="@+id/textViewCell"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical"
+            android:text="Cell:"
+            android:layout_weight="1"
+            android:paddingBottom="10dp"
+            android:textColor="#000000"
+            android:textSize="26dp" />
+
+        <TextView
+            android:id="@+id/textView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical"
+            android:text="Angle:"
+            android:layout_weight="1"
+            android:paddingBottom="10dp"
+            android:textColor="#000000"
+            android:textSize="26dp" />
+
+
+        <Button
+            android:id="@+id/buttonStartCalibAngle"
+            android:layout_width="220dp"
+            android:layout_height="44dp"
+            android:text="Start: Angle " />
+
+        <Button
+            android:id="@+id/buttonEndCalibAngle"
+            android:layout_width="220dp"
+            android:layout_height="44dp"
+            android:text="End: Angle " />
+
+
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="120dp"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:background="@color/light_green"
+        android:layout_weight="1">
+
+        <TextView
+            android:id="@+id/textViewCell"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical"
+            android:text="Cell:"
+            android:layout_weight="1"
+            android:paddingBottom="10dp"
+            android:textColor="#000000"
+            android:textSize="26dp" />
+
+
+        <Button
+            android:id="@+id/buttonStart"
+            android:layout_width="220dp"
+            android:layout_height="44dp"
+            android:text="Start" />
+
+        <Button
+            android:id="@+id/button"
+            android:layout_width="220dp"
+            android:layout_height="44dp"
+            android:text="Ex" />
+
+
+
+    </LinearLayout>
+
+
+
+</LinearLayout>

@@ -3,6 +3,8 @@ package com.example.myapplication.map;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.PorterDuff;
+import android.graphics.PorterDuffColorFilter;
 import android.graphics.drawable.ShapeDrawable;
 import android.graphics.drawable.shapes.RectShape;
 
@@ -52,11 +54,21 @@ public class Cell {
         return false;
     }
 
+    public boolean detectCoordinationInScope(int x, int y){
+        if(x<right && x>left && y<bottom && y>top)
+            return true;
+        return false;
+    }
+
     public void drawCell(Canvas canvas){
         ShapeDrawable drawable =  new ShapeDrawable(new RectShape());
+        drawable.setBounds(left,top,right,bottom);
         drawable.getPaint().setStyle(Paint.Style.STROKE);
         drawable.getPaint().setColor(Color.BLACK);
-        drawable.setBounds(left,top,right,bottom);
+        drawable.draw(canvas);
+
+        drawable.getPaint().setStyle(Paint.Style.FILL);
+        drawable.getPaint().setColor(Color.WHITE);
         drawable.draw(canvas);
         Paint paint = new Paint();
         paint.setTextSize(8);
@@ -73,7 +85,7 @@ public class Cell {
     public static int mapMeterToPixel(float measure){
 //        System.out.println("measure is "+ measure +"\n");
 //        System.out.println("int is "+ (int)measure +"\n");
-        return (int)(measure*10);
+        return (int)(measure*12);
     }
 
 

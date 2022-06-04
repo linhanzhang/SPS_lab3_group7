@@ -19,6 +19,8 @@
             android:id="@+id/canvas"
             android:layout_width="364dp"
             android:layout_height="184dp"
+            android:paddingTop="15dp"
+            android:paddingLeft="50dp"
             android:layout_weight="1" />
 
         <LinearLayout
