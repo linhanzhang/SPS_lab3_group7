@@ -26,8 +26,14 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.example.myapplication.R;
 import com.example.myapplication.map.Cell;
 import com.example.myapplication.map.Layout;
+import com.example.myapplication.motion.StepCounter;
 import com.example.myapplication.particles.Particle;
 import com.example.myapplication.particles.ParticleCollection;
+import com.opencsv.CSVWriter;
+
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.List;
 
 public class LocalizationActivity extends AppCompatActivity implements SensorEventListener {
 
@@ -35,11 +41,14 @@ public class LocalizationActivity extends AppCompatActivity implements SensorEve
     private Sensor rotationSensor;
     private Sensor stepCounter;
     private Sensor accSensor;
+    private Sensor magSensor;
+    private Sensor gyroSensor;
     private Button start;
     private Button end;
     private Button stepAdd;
     private TextView textStep;
     private TextView textOrientation;
+    private TextView textCell;
     private final String TAG = "DEBUG";
     public int step;
     private Layout layout;
@@ -47,8 +56,7 @@ public class LocalizationActivity extends AppCompatActivity implements SensorEve
     private ParticleCollection pc;
     private float stepDistance;
     private float refDirection;
-    private final float tolerateWindow = 20;
-    private int currentDirection;
+    private final float tolerateWindow = 40;
     // Gravity for accelerometer data
     private float[] gravity = new float[3];
     // smoothed values
@@ -57,8 +65,27 @@ public class LocalizationActivity extends AppCompatActivity implements SensorEve
     private boolean ignore;
     private int countdown;
     private double prevY;
-    private double threshold = 0.5;
-    private SeekBar seek;
+    private double threshold = 0;
+
+    private int calibratedDirection = 0;
+
+    private StepCounter sc;
+
+    private boolean inStep;
+
+    private List<String[]> data;
+
+    float[] rotationMatrix = new float[9];
+    float[] magnetometerReading = new float[3];
+//    float[] mGeoMags = new float[3];
+    float[] orientationAngles = new float[3];
+    float[] accelerometerReading = new float[3];
+
+
+
+    CSVWriter csvWriter = null;
+    String csv = "/data/data/com.example.myapplication/cache/walk_sqrt.csv";
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -67,19 +94,38 @@ public class LocalizationActivity extends AppCompatActivity implements SensorEve
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
         setContentView(R.layout.activity_localization);
 
+        sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
+        stepCounter = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER);
+        rotationSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
+        accSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+        magSensor = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
+        gyroSensor = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
+//                    rotationSensor = sensorManager.getDefaultSensor(Sensor.TYPE_D);
+
+        sensorManager.registerListener(LocalizationActivity.this, stepCounter, SensorManager.SENSOR_DELAY_GAME);
+        sensorManager.registerListener(LocalizationActivity.this, rotationSensor, SensorManager.SENSOR_DELAY_FASTEST);
+        sensorManager.registerListener(LocalizationActivity.this, accSensor, SensorManager.SENSOR_DELAY_GAME);
+        sensorManager.registerListener(LocalizationActivity.this, magSensor, SensorManager.SENSOR_DELAY_NORMAL);
+
         start = (Button) findViewById(R.id.buttonStart);
         end = (Button) findViewById(R.id.buttonEnd);
         stepAdd = (Button) findViewById(R.id.buttonStepAdd);
         textStep = (TextView)findViewById(R.id.textViewStep);
         textOrientation = (TextView)findViewById(R.id.textViewOrientation);
-        seek = (SeekBar) findViewById(R.id.seek);
+        textCell = (TextView)findViewById(R.id.textViewCell);
+
 
         layout = new Layout();
         getLayoutCanvas();
 
         step = 0;
+        threshold = 0.18; // get from experiments
+        stepDistance = (float) 0.736;
         textStep.setText("step:"+step);
         pc = null;
+        refDirection = -53;
+
+        sc = new StepCounter();
         if(pc == null){
             Log.d("SET NULL","pc set to null");
         }
@@ -87,12 +133,20 @@ public class LocalizationActivity extends AppCompatActivity implements SensorEve
 
         }
 
+        try {
+            csvWriter = new CSVWriter(new FileWriter(csv));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
 
         // get step distance from Calibration Activity
         Bundle bundle = getIntent().getExtras();
         if(bundle!=null){
-            stepDistance = bundle.getFloat("stepDistance");
+            //stepDistance = bundle.getFloat("stepDistance");
             refDirection = bundle.getFloat("refDirection");
+            //threshold = bundle.getDouble("threshold");
+            threshold = 0.38;
 
             for (String key : bundle.keySet())
             {
@@ -100,7 +154,7 @@ public class LocalizationActivity extends AppCompatActivity implements SensorEve
             }
 
 
-            System.out.println("step distance is "+stepDistance);
+     //       System.out.println("step distance is "+stepDistance);
 
         }
         else{
@@ -117,29 +171,11 @@ public class LocalizationActivity extends AppCompatActivity implements SensorEve
                     Log.d("pc not NULL","pc not");
                 }
 
-//                Particle p = new Particle(0,0,1);
-//                p.drawParticle(canvas);
-//
-//                Particle p1 = new Particle(132,42,5);
-//                p1.drawParticle(canvas);
 
                 if(pc == null) {
                     pc = new ParticleCollection(layout);
                     pc.initializeParticleSet();
                     pc.drawParticleCollection(canvas);
-                    Log.e(TAG, "here");
-                    sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
-                    stepCounter = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER);
-                    rotationSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
-                    accSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-//                    rotationSensor = sensorManager.getDefaultSensor(Sensor.TYPE_D);
-
-                    sensorManager.registerListener(LocalizationActivity.this, stepCounter, SensorManager.SENSOR_DELAY_GAME);
-                    sensorManager.registerListener(LocalizationActivity.this, rotationSensor, SensorManager.SENSOR_DELAY_GAME);
-                    sensorManager.registerListener(LocalizationActivity.this, accSensor, SensorManager.SENSOR_DELAY_GAME);
-
-                    Log.e(TAG, "there");
-                    //canvas.drawColor(Color.TRANSPARENT);
                 }
                 else{
                     Toast t = Toast.makeText(getApplicationContext(),
@@ -156,9 +192,12 @@ public class LocalizationActivity extends AppCompatActivity implements SensorEve
         end.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-
-                Log.e(TAG, "seeee");
-                Log.d("Locate debug", "I am locate");
+                try {
+                    csvWriter.writeAll(data);
+                    csvWriter.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
                 sensorManager.unregisterListener(LocalizationActivity.this,stepCounter);
                 sensorManager.unregisterListener(LocalizationActivity.this,rotationSensor);
                 sensorManager.unregisterListener(LocalizationActivity.this, accSensor);
@@ -172,30 +211,17 @@ public class LocalizationActivity extends AppCompatActivity implements SensorEve
             @Override
             public void onClick(View view) {
 
-                step++;
-                textStep.setText("step:"+step);
+//                step++;
+//                textStep.setText("step:"+step+"\n\t"
+//                                + String.valueOf(threshold));
+//
+//                getLayoutCanvas();
+//
+//                pc.moveParticles(canvas, (int)Cell.mapMeterToPixel(stepDistance), calibratedDirection);  //ATTENTION: to be changed
 
-                getLayoutCanvas();
+               calibratedDirection = (calibratedDirection+90)%360;
+              //  textOrientation.setText(String.valueOf(calibratedDirection));
 
-                pc.moveParticles(canvas, (int)Cell.mapMeterToPixel(stepDistance), currentDirection);  //ATTENTION: to be changed
-
-
-            }
-        });
-
-        seek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
-                // TODO Auto-generated method stub
-            }
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-                // TODO Auto-generated method stub
-            }
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int progress,boolean fromUser) {
-                threshold = ((double)seek.getProgress()) * 0.02;
-                thresholdView.setText("Threshold: "+ threshold);
             }
         });
 
@@ -206,39 +232,74 @@ public class LocalizationActivity extends AppCompatActivity implements SensorEve
 
         if(pc != null) {
 
-//            if (event.sensor.getType() == Sensor.TYPE_STEP_COUNTER) {
-//
-//                Toast t = Toast.makeText(getApplicationContext(),
-//                        "This is a message displayed in a Toast",
-//                        Toast.LENGTH_SHORT);
-//
-//                t.show();
-//                step++;
-//                textStep.setText("step:" + step);
-//                if(step>=2) {   // to be changed. should remove if condition
-//                    getLayoutCanvas();
-//                    Log.d("step>2","step>2");
-//                    //canvas.drawColor(Color.WHITE);
-//                    //layout.drawLayout(canvas);
-//                    getLayoutCanvas();
-//
-//                    pc.moveParticles(canvas, (int)Cell.mapMeterToPixel(stepDistance), currentDirection);  //ATTENTION: to be changed
-//                    //pc.drawParticleCollection(canvas);
-//                }
-//////
-//
+//            if(event.sensor.getType() == Sensor.TYPE_ROTATION_VECTOR){
+//                float[] rotationMatrix = new float[16];
+//                float[] orientations = new float[3];
+//                SensorManager.getRotationMatrixFromVector(rotationMatrix, event.values);
+//                SensorManager.getOrientation(rotationMatrix, orientations);
+//                // we only need one orientation
+//                float orientation = orientations[0];
+//                float direction = (float) Math.toDegrees(orientation);
+//                getCalibratedDirection(direction);
+//                textOrientation.setText(String.valueOf(calibratedDirection)+" "+direction);
 //            }
+            switch (event.sensor.getType()) {
+                case Sensor.TYPE_ACCELEROMETER:
+                    System.arraycopy(event.values, 0, accelerometerReading, 0, 3);
+                    break;
+                case Sensor.TYPE_MAGNETIC_FIELD:
+                    System.arraycopy(event.values, 0, magnetometerReading, 0, 3);
+                    break;
+//                case Sensor.TYPE_ORIENTATION:
+//                    System.arraycopy(event.values, 0, mOldOreintation, 0, 3);
+//                    break;
 
-            if(event.sensor.getType() == Sensor.TYPE_ROTATION_VECTOR){
-                float[] rotationMatrix = new float[16];
-                float[] orientations = new float[3];
-                SensorManager.getRotationMatrixFromVector(rotationMatrix, event.values);
-                SensorManager.getOrientation(rotationMatrix, orientations);
-                // we only need one orientation
-                float orientation = orientations[0];
-                float direction = (float) Math.toDegrees(orientation);
-                currentDirection = getCalibratedDirection(direction);
-                textOrientation.setText(String.valueOf(currentDirection)+" "+direction);
+                default:
+                    return;
+            }
+
+            if(event.sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD){
+//                float[] rotationMatrix = new float[9];
+//                float[] mGravs = new float[3];
+//                float[] mGeoMags = new float[3];
+//                float[] orientationAngles = new float[3];
+//                float[] accelerometerReading = new float[3];
+                boolean succeed = SensorManager.getRotationMatrix(rotationMatrix,null,accelerometerReading,magnetometerReading);
+                if(succeed){
+                    Log.d("succeed","succeed");
+                }
+                else{
+                    Log.d("fail","fail");
+                }
+
+                SensorManager.getOrientation(rotationMatrix, orientationAngles);
+                float direction = (float) Math.toDegrees(orientationAngles[0]);
+                // double dir = (orientationAngles[0]*100) / 1.722 ;
+//                Log.d(,"")
+                Log.d("====","====");
+                textOrientation.setText(String.valueOf(direction));
+            }
+
+
+
+            if(event.sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD){
+//                float[] rotationMatrix = new float[9];
+//                float[] mGravs = new float[3];
+//                float[] mGeoMags = new float[3];
+//                float[] orientationAngles = new float[3];
+//                float[] accelerometerReading = new float[3];
+                boolean succeed = SensorManager.getRotationMatrix(rotationMatrix,null,accelerometerReading,magnetometerReading);
+                if(succeed){
+                    Log.d("succeed","succeed");
+                }
+                else{
+                    Log.d("fail","fail");
+                }
+                SensorManager.getOrientation(rotationMatrix, orientationAngles);
+                float direction = (float) Math.toDegrees(orientationAngles[0]);
+               // double dir = (orientationAngles[0]*100) / 1.722 ;
+                Log.d("====","====");
+                textOrientation.setText(String.valueOf(direction)+" "+String.valueOf(calibratedDirection));
             }
 
             // get accelerometer data
@@ -248,19 +309,58 @@ public class LocalizationActivity extends AppCompatActivity implements SensorEve
                 gravity[0] = smoothed[0];
                 gravity[1] = smoothed[1];
                 gravity[2] = smoothed[2];
-                //acc.setText("x: "+gravity[0] + " y: " + gravity[1] + " z: " + gravity[2]+ "ignore: "+ ignore + "countdown: "+ countdown);
-                if(ignore) {
-                    countdown--;
-                    ignore = (countdown < 0)? false : ignore;
+
+                float currentvectorSum = sc.getAccelRes(smoothed);
+
+              //  data.add(new String[]{String.valueOf(currentvectorSum)});
+               // csvWriter.writeNext(new String[]{String.valueOf(currentvectorSum)});
+               // acc.setText("x: "+gravity[0] + " y: " + gravity[1] + " z: " + gravity[2]+ "ignore: "+ ignore + "countdown: "+ countdown);
+//                if(ignore) {
+//                    countdown--;
+//                    ignore = (countdown < 0)? false : ignore;
+//                }
+//                else
+//                    countdown = 10; //
+//                    //countdown = 10; // my phone
+//                if((Math.abs(prevY - gravity[1]) > threshold) && !ignore){
+//                    step++;
+//                    textStep.setText("Step: " + step);
+//                    ignore = true;
+//
+//                    getLayoutCanvas();
+//                    getLayoutCanvas();
+//
+//                    pc.moveParticles(canvas, (int)Cell.mapMeterToPixel(stepDistance), calibratedDirection);  //ATTENTION: to be changed
+//                    //int predictCell = pc.getCellwithMaxWeight();
+//                   // textCell.setText("cell "+String.valueOf(predictCell));
+//                }
+////                prevY = gravity[1];
+//                boolean stepDetected = sc.isStepDetected(event.values.clone());
+//                if(stepDetected){
+//                    step++;
+//                    textStep.setText("Step: " + step);
+//                }
+
+              //  textStep.setText(String.valueOf(currentvectorSum));
+
+                if(currentvectorSum < 9.0 && inStep==false){  //para
+                    inStep = true;
                 }
-                else
-                    countdown = 22;
-                if((Math.abs(prevY - gravity[1]) > threshold) && !ignore){
+                if(currentvectorSum > 10.5 && inStep==true){   //para
+                    inStep = false;
                     step++;
+                    //Log.d("TAG_ACCELEROMETER", "\t" + numSteps);
                     textStep.setText("Step: " + step);
-                    ignore = true;
+                    getLayoutCanvas();
+
+                    pc.moveParticles(canvas, (int)Cell.mapMeterToPixel(stepDistance), calibratedDirection);  //ATTENTION: to be changed
+                    int predictCell = pc.getCellwithMaxWeight();
+                    textCell.setText("cell "+String.valueOf(predictCell));
+
+                    //textStep.setText("Step: " + step);
                 }
-                prevY = gravity[1];
+
+
             }
 
         }
@@ -289,14 +389,14 @@ public class LocalizationActivity extends AppCompatActivity implements SensorEve
     /**
      *   The output is only 0, 90, 180, 270
      */
-    private int getCalibratedDirection(float direction){
+    private void getCalibratedDirection(float direction){
 
         // compensate the direction to let the ref direction have the biggest degree value
         // ref direction(forward): 0 degree
 //         right: 90 degree
 //         back: 180 degree
 //         left: 270 degree
-        int calibratedDirection = 0;
+
         if(direction<refDirection){
             direction+=360;
         }
@@ -313,16 +413,25 @@ public class LocalizationActivity extends AppCompatActivity implements SensorEve
         else if(direction>refDirection+270-tolerateWindow && direction<refDirection+270+tolerateWindow){
             calibratedDirection =270;
         }
-        return calibratedDirection;
+        //return calibratedDirection;
     }
 
     protected float[] lowPassFilter( float[] input, float[] output ) {
         if ( output == null ) return input;
         for ( int i=0; i<input.length; i++ ) {
-            output[i] = output[i] + 1.0f * (input[i] - output[i]);
+            output[i] = output[i] + 0.5f * (input[i] - output[i]);
+            //output[i] = output[i] + 0.5f * (input[i] - output[i]); // my phone
         }
         return output;
     }
+
+//    protected float[] kalmanFilter( float [] input, float[] output){
+//
+//    }
+
+
+
+
 
 
 }

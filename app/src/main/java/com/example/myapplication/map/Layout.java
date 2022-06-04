@@ -28,9 +28,9 @@ public class Layout {
         cellList.add(new Cell(10, 22.87f,3.15f, 26.50f, 6.30f));
         cellList.add(new Cell(11, 22.87f,6.30f, 24.10f, 10.32f));
         cellList.add(new Cell(12, 18.28f,10.32f, 24.1f, 11.90f));
-        cellList.add(new Cell(13, 14.54f,4.25f, 16.83f, 8.58f));
-        cellList.add(new Cell(14, 18.28f,10.32f, 24.1f, 11.90f));
-        cellList.add(new Cell(15, 14.54f,4.25f, 16.83f, 8.58f));
+        cellList.add(new Cell(14, 14.54f,4.25f, 16.83f, 6.58f));
+        cellList.add(new Cell(13, 14.54f,7.25f, 16.83f, 9.58f));
+        cellList.add(new Cell(15, 14.54f,10.25f, 16.83f, 12.58f));
 //        cellList.add(new Cell(14, 0,0, 3.63f, 3.15f));
 //        cellList.add(new Cell(15, 0,0, 3.63f, 3.15f));
     }
@@ -51,6 +51,15 @@ public class Layout {
         return true;
     }
 
+    public boolean detectOutAllCell(int x, int y){
+        for(int i=0;i<CELLNUM;i++){
+            if(cellList.get(i).detectCoordinationInScope(x,y)){
+                return false;
+            }
+        }
+        return true;
+    }
+
     public void drawLayout(Canvas canvas){
         for(int i=0;i<CELLNUM;i++){
             cellList.get(i).drawCell(canvas);
@@ -60,4 +69,21 @@ public class Layout {
     public List<Cell> getCellList() {
         return cellList;
     }
+
+    /**
+     *
+     * @param x
+     * @param y
+     * @return the cell id
+     */
+    public int getCellfromCoordination(int x, int y){
+        for(int i=0;i<CELLNUM;i++){
+            if(cellList.get(i).detectCoordinationInScope(x,y)){
+                return (i+1);
+            }
+        }
+        // if not in any cell
+        return -1;
+    }
+
 }

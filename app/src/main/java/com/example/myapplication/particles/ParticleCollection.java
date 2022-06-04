@@ -9,6 +9,9 @@ import androidx.annotation.RequiresApi;
 import com.example.myapplication.map.Cell;
 import com.example.myapplication.map.Layout;
 
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
@@ -18,10 +21,11 @@ public class ParticleCollection {
     public int CELLNUM=15;
     public Layout layout;
     public List<Particle> particleList;
+    public int totalNumParticles;
     /**
      *  RATIO = 1/(num of particles / pixel)
      */
-    public int RATIO = 100;
+    public static final int RATIO = 20;
 
     /**
      * Direction: is the direction in layout graph
@@ -32,20 +36,20 @@ public class ParticleCollection {
                                        // will be RIGHT
     public static final int DOWN = 90;
 
+
     public ParticleCollection(Layout layout){
         this.layout = layout;
         particleList = new LinkedList<>();
     }
 
     public void initializeParticleSet(){
-        for(int i=0; i<CELLNUM;i++){
+        // don't initialize at Cell 13 14 15 cuz we won't start there
+        for(int i=0; i<CELLNUM-3;i++){
             Cell cell = layout.getCellList().get(i);
             // the num of particles is decided by prior probability, namely the area of cell
             int numOfParticle = cell.area / RATIO;
-
-            System.out.println("num of particle:"+numOfParticle);
-
             initializeParticleinCell(cell.id,cell.left,cell.top,cell.right,cell.bottom,numOfParticle);
+            totalNumParticles = particleList.size();
 
         }
     }
@@ -73,13 +77,6 @@ public class ParticleCollection {
 
     }
 
-    public void clearParticleCollection(Canvas canvas){
-//        for(int i=0;i<particleList.size();i++){
-//            particleList.get(i).clearParticle(canvas);
-//        }
-        particleList.clear();
-        drawParticleCollection(canvas);
-    }
 
     /**
      *
@@ -89,7 +86,6 @@ public class ParticleCollection {
     public void moveParticles(Canvas canvas, int distance, int direction){
         Log.d("size of set", String.valueOf(particleList.size()));
         int count =0;
-       // int pixelDistance = Cell.mapMeterToPixel(distance);
         int pixelDistance = distance;
         Log.d("move distance", String.valueOf(pixelDistance));
         if(direction == LEFT){
@@ -98,7 +94,9 @@ public class ParticleCollection {
                 p.x-=pixelDistance;
                 if(layout.detectOutAllCell(p)){
                     p.alive = false;
-                    Log.d("die out count ", String.valueOf(count++));
+                }
+                else{
+                    p.cell = layout.getCellfromCoordination(p.x,p.y);
                 }
             }
         }
@@ -108,7 +106,9 @@ public class ParticleCollection {
                 p.y -= pixelDistance;
                 if(layout.detectOutAllCell(p)){
                     p.alive = false;
-                    Log.d("die out count ", String.valueOf(count++));
+                }
+                else{
+                    p.cell = layout.getCellfromCoordination(p.x,p.y);
                 }
             }
         }
@@ -116,11 +116,11 @@ public class ParticleCollection {
             for(int i=0;i<particleList.size();i++) {
                 Particle p = particleList.get(i);
                 p.x += pixelDistance;
-                //Log.d("move right","p.x: "+p.x);
                 if(layout.detectOutAllCell(p)){
                     p.alive = false;
-                   // Log.d("die out","p.x="+p.x+" p.y="+p.y);
-                    Log.d("die out count ", String.valueOf(count++));
+                }
+                else{
+                    p.cell = layout.getCellfromCoordination(p.x,p.y);
                 }
             }
         }
@@ -130,7 +130,9 @@ public class ParticleCollection {
                 p.y += pixelDistance;
                 if(layout.detectOutAllCell(p)){
                     p.alive = false;
-                    Log.d("die out count ", String.valueOf(count++));
+                }
+                else{
+                    p.cell = layout.getCellfromCoordination(p.x,p.y);
                 }
             }
         }
@@ -144,25 +146,147 @@ public class ParticleCollection {
 
     @RequiresApi(api = Build.VERSION_CODES.N)
     public void updateParticleSet(){
-//        for(int i=0; i<particleList.size();i++){
-//            Particle p = particleList.get(i);
-//            if(!p.alive){
-//                particleList.remove(i);
-//            }
-//        }
         int countAlive = 0;
         for(int i =0 ;i< particleList.size();i++){
             Particle p = particleList.get(i);
-            if(p.alive) countAlive++;
+            if(p.alive) {
+                p.weight++;
+                countAlive++;
+            }
         }
 
-        Log.d("count alive ", String.valueOf(countAlive));
-        particleList.removeIf(particle -> !particle.alive);
+        // if all particles are out of bound unfortunately, randomly select one and leave it in
+        // particleList to avoid application crash
+        if(countAlive == 0){
+            Random random = new Random();
+            int index = random.nextInt(totalNumParticles);
+            particleList.get(index).alive = true;
+        }
+
+        particleList.removeIf(particle -> !particle.alive && particleList.size() != 0);
+        // new particles will be added back to the particle list, total num of particle remains unchanged
+        if(particleList.size()<totalNumParticles) {
+            resampleParticles((totalNumParticles - countAlive));
+        }
     }
 
-    public void resampleParticles(){
+    /**
+     *
+     * @param numResample   num of particles that needs to be resampled
+     */
+
+    public void resampleParticles(int numResample){
+
+        // select the particle with biggest weight
+        // TODO: select top 10%, select the particle inside bound
+        //      resample only when under threshold
+        int maxWeight = -1;
+//        Particle biggestParticle = particleList.get(0);
+//
+//        // print the weight of current alive particles
+//        for(int i=0; i < particleList.size(); i++){
+//            Particle p = particleList.get(i);
+//            //Log.d("Weight", String.valueOf(p.weight));
+//            if(p.weight > maxWeight ){
+//                maxWeight = p.weight;
+//                biggestParticle = p;
+//            }
+//        }
+        Collections.sort(particleList);
+        List <Particle> maxWeightParticleList = new LinkedList<>();
+        for(int i=0;i<particleList.size()/10;i++){
+            maxWeightParticleList.add(particleList.get(i));
+        }
+
+        // resample if less than 70%
+        if(particleList.size()<totalNumParticles*0.7)
+            resampleAroundParticleSet(maxWeightParticleList, numResample);
+
+
 
     }
 
+    /**
+     *  Generate
+     * @param
+     * @param numResample
+     */
+
+//    public void resampleAroundParticle(Particle p, int numResample){
+//        for(int i=0; i<numResample; i++){
+//            // std might need CHANGE later
+//
+//            // make sure that the resampled particle is inside scope?
+//            int x = 0;
+//            int y = 0;
+//            x = (int) getRandomFromGaussian(p.x, 2);
+//            y = (int) getRandomFromGaussian(p.y, 2);
+//            // might need CHANGE later
+//            Particle newParticle = new Particle(x,y,layout.getCellfromCoordination(x,y));
+//            particleList.add(newParticle);
+//        }
+//    }
+
+    public void resampleAroundParticleSet(List<Particle> maxWeightList, int numResample){
+
+       // int unResampled = numResample;
+        // walk through the top 10% list
+        for(int i=0; i<maxWeightList.size(); i++){
+            // std might need CHANGE later
+            Particle p = maxWeightList.get(i);
+            for(int j=0; j<numResample/maxWeightList.size();j++){
+                // make sure that the resampled particle is inside scope?
+                int x = 0;
+                int y = 0;
+                x = (int) getRandomFromGaussian(p.x, 2);
+                y = (int) getRandomFromGaussian(p.y, 2);
+
+                // if x, y not in scope, then use particle over the old one instead
+                if(layout.detectOutAllCell(x,y)){
+                    x = p.x;
+                    y = p.y;
+                }
+
+
+                // might need CHANGE later
+                Particle newParticle = new Particle(x,y,layout.getCellfromCoordination(x,y));
+                particleList.add(newParticle);
+            }
+
+
+
+        }
+    }
+
+
+    public float getRandomFromGaussian(float mean, float sd) {
+        Random r = new Random();
+        return (float) ((r.nextGaussian() * sd) + mean);
+    }
+
+    public int getCellwithMaxWeight(){
+        List <Integer> weightList = new LinkedList<>();
+        for(int i=0 ;i<CELLNUM; i++){
+            weightList.add(0);
+        }
+
+        for(int i=0; i<particleList.size();i++){
+            Particle p = particleList.get(i);
+            if(p.cell != -1) {
+                int newWeightSum = weightList.get(p.cell - 1) + p.weight;
+                weightList.set(p.cell - 1, newWeightSum);
+            }
+        }
+
+        int maxWeightSum = -1;
+        int maxWeightCell = -1;
+        for(int i=0;i<CELLNUM;i++){
+            if(weightList.get(i)>maxWeightSum){
+                maxWeightSum = weightList.get(i);
+                maxWeightCell = i+1;
+            }
+        }
+        return maxWeightCell;
+    }
 
 }

@@ -52,6 +52,12 @@ public class Cell {
         return false;
     }
 
+    public boolean detectCoordinationInScope(int x, int y){
+        if(x<right && x>left && y<bottom && y>top)
+            return true;
+        return false;
+    }
+
     public void drawCell(Canvas canvas){
         ShapeDrawable drawable =  new ShapeDrawable(new RectShape());
         drawable.getPaint().setStyle(Paint.Style.STROKE);

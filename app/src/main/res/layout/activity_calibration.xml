@@ -51,6 +51,20 @@
         tools:layout_conversion_absoluteWidth="380dp"
         tools:layout_editor_absoluteY="113dp" />
 
+    <TextView
+        android:id="@+id/textViewThreshold"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="threshold"
+        android:textSize="20dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.329"
+        app:layout_constraintRight_toLeftOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        tools:layout_conversion_absoluteHeight="19dp"
+        tools:layout_conversion_absoluteWidth="380dp"
+        tools:layout_editor_absoluteY="350dp" />
+
     <Button
         android:id="@+id/buttonStart"
         android:layout_width="wrap_content"
@@ -91,6 +105,13 @@
         app:layout_constraintVertical_bias="0.0"
         tools:layout_conversion_absoluteHeight="48dp"
         tools:layout_conversion_absoluteWidth="145dp" />
+
+    <SeekBar
+        android:id="@+id/seek"
+        android:layout_width="336dp"
+        android:layout_height="114dp"
+        tools:layout_editor_absoluteX="220dp"
+        tools:layout_editor_absoluteY="26dp" />
 
 
 </androidx.constraintlayout.widget.ConstraintLayout>
