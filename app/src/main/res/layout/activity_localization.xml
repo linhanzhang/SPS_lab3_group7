@@ -89,6 +89,16 @@
         tools:layout_editor_absoluteX="228dp"
         tools:layout_editor_absoluteY="263dp" />
 
+    <TextView
+        android:id="@+id/DegreeTV"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginBottom="8dp"
+        android:text="Heading Angle"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
     <!--    <com.example.myapplication.map.Layout-->
     <!--        android:id="@+id/view_path"-->
     <!--        android:layout_weight="0.7"-->

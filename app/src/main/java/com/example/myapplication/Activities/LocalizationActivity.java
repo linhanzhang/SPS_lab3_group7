@@ -1,8 +1,11 @@
 package com.example.myapplication.Activities;
 
+import android.Manifest;
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -12,6 +15,7 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.location.Location;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -20,17 +24,20 @@ import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
-
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 import com.example.myapplication.R;
 import com.example.myapplication.map.Cell;
 import com.example.myapplication.map.Layout;
 import com.example.myapplication.particles.Particle;
 import com.example.myapplication.particles.ParticleCollection;
+import com.google.android.gms.location.*;
+import com.google.android.gms.tasks.OnSuccessListener;
 
 public class LocalizationActivity extends AppCompatActivity implements SensorEventListener {
-
+    private FusedLocationProviderClient fusedLocationClient;
     private SensorManager sensorManager;
     private Sensor rotationSensor;
     private Sensor stepCounter;
@@ -47,7 +54,7 @@ public class LocalizationActivity extends AppCompatActivity implements SensorEve
     private ParticleCollection pc;
     private float stepDistance;
     private float refDirection;
-    private final float tolerateWindow = 20;
+    private final float tolerateWindow = 45;
     private int currentDirection;
     // Gravity for accelerometer data
     private float[] gravity = new float[3];
@@ -60,12 +67,82 @@ public class LocalizationActivity extends AppCompatActivity implements SensorEve
     private double threshold = 0;
     private SeekBar seek;
 
+    private TextView degreeTV;
+    private Boolean isLocationRetrieved = true;
+    private Double latitude ;
+    private Double longitude ;
+    private Double altitude;
+    private static final int REQUEST_PERMISSION_FINE_LOCATION =1;
+//    private SensorEventListener compassListener = new SensorEventListener(){
+//        @Override
+//        public void onAccuracyChanged(Sensor sensor, int accuracy) {
+//            // not in use;
+//        }
+//        @Override
+//        public void onSensorChanged(SensorEvent event){
+//            // get angle around the z-axis rotated
+//            float degree = Math.round(event.values[0]);
+//            DegreeTV.setText("Heading: " + Float.toString(degree) + " degrees");
+//            // rotation animation - reverse turn degree degrees
+////            RotateAnimation ra = new RotateAnimation(
+////                    DegreeStart,
+////                    -degree,
+////                    Animation.RELATIVE_TO_SELF, 0.5f,
+////                    Animation.RELATIVE_TO_SELF, 0.5f);
+////            // set the compass animation after the end of the reservation status
+////            ra.setFillAfter(true);
+////            // set how long the animation for the compass image will take place
+////            ra.setDuration(210);
+////            // Start animation of compass image
+////            compassimage.startAnimation(ra);
+////            DegreeStart = -degree;
+//        }
+//
+//    };
+
+    OnSuccessListener<Location> altitudeUpdate = new OnSuccessListener<Location>(){
+        @Override
+        public void onSuccess(Location location) {
+            // Got last known location. In some rare situations this can be null.
+            if (location != null) {
+                isLocationRetrieved = true;
+                latitude = Double.valueOf(location.getLatitude());
+                longitude = Double.valueOf(location.getLongitude());
+                altitude = Double.valueOf(location.getAltitude());
+                degreeTV.setText(Double.toString(altitude));
+                System.out.println("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+                System.out.println(Double.toString(altitude));
+//                            magneticDeclination = CompassHelper.calculateMagneticDeclination(latitude, longitude, altitude);
+//                            textViewMagneticDeclination.setText(getString(R.string.magnetic_declination, magneticDeclination));
+            }
+        }
+    };
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
         setContentView(R.layout.activity_localization);
+        sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
+//        sensorManager.registerListener(compassListener, sensorManager.getDefaultSensor(Sensor.TYPE_ORIENTATION),
+//                SensorManager.SENSOR_DELAY_GAME);
+
+        degreeTV = (TextView) findViewById(R.id.DegreeTV );
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(LocalizationActivity.this);
+        //check if we have permission to access location
+        if (ContextCompat.checkSelfPermission(
+                this, Manifest.permission.ACCESS_FINE_LOCATION) ==
+                PackageManager.PERMISSION_GRANTED) {
+            //fine location permission already granted
+           getLocation();
+
+        } else {
+            //if permission is not granted, request location permissions from user
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+                    REQUEST_PERMISSION_FINE_LOCATION);
+        }
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+
 
         start = (Button) findViewById(R.id.buttonStart);
         end = (Button) findViewById(R.id.buttonEnd);
@@ -128,7 +205,7 @@ public class LocalizationActivity extends AppCompatActivity implements SensorEve
                     pc.initializeParticleSet();
                     pc.drawParticleCollection(canvas);
                     Log.e(TAG, "here");
-                    sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
+
                     stepCounter = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER);
                     rotationSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
                     accSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
@@ -198,7 +275,7 @@ public class LocalizationActivity extends AppCompatActivity implements SensorEve
                 //thresholdView.setText("Threshold: "+ threshold);
             }
         });
-
+        //degreeTV.setText(Double.toString(altitude));
     }
 
     @Override
@@ -232,11 +309,12 @@ public class LocalizationActivity extends AppCompatActivity implements SensorEve
             if(event.sensor.getType() == Sensor.TYPE_ROTATION_VECTOR){
                 float[] rotationMatrix = new float[16];
                 float[] orientations = new float[3];
-                SensorManager.getRotationMatrixFromVector(rotationMatrix, event.values);
-                SensorManager.getOrientation(rotationMatrix, orientations);
+                sensorManager.getRotationMatrixFromVector(rotationMatrix, event.values);
+                sensorManager.getOrientation(rotationMatrix, orientations);
                 // we only need one orientation
                 float orientation = orientations[0];
                 float direction = (float) Math.toDegrees(orientation);
+                direction = this.map180to360(direction);
                 currentDirection = getCalibratedDirection(direction);
                 textOrientation.setText(String.valueOf(currentDirection)+" "+direction);
             }
@@ -333,5 +411,27 @@ public class LocalizationActivity extends AppCompatActivity implements SensorEve
         return output;
     }
 
-
+    @SuppressLint("MissingPermission") //suppress warning since we have already checked for permissions before calling the function
+    private void getLocation() {
+        fusedLocationClient.getCurrentLocation(100,null).addOnSuccessListener(altitudeUpdate);
+    }
+    public static float map180to360(float angle) {
+        return (angle + 360) % 360;
+    }
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions,
+                                           int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == REQUEST_PERMISSION_FINE_LOCATION) {
+            //if request is cancelled, the result arrays are empty.4
+            if (grantResults.length > 0 &&
+                    grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                //permission is granted
+                getLocation();
+            } else {
+                //display Toast with error message
+                Toast.makeText(this, "R.string.location_error_msg", Toast.LENGTH_LONG).show();
+            }
+        }
+    }
 }
