@@ -3,8 +3,6 @@
   <component name="DesignSurface">
     <option name="filePathToZoomLevelMap">
       <map>
-        <entry key="..\:/Smart Phone Sensing/SPS_lab3_group7/app/src/main/res/layout/activity_localization.xml" value="0.20219298245614034" />
-        <entry key="..\:/Smart Phone Sensing/SPS_lab3_group7/app/src/main/res/layout/activity_main.xml" value="0.45260416666666664" />
         <entry key="app/src/main/res/layout/activity_calibration.xml" value="0.2917541503906249" />
         <entry key="app/src/main/res/layout/activity_localization.xml" value="0.22313232421875" />
         <entry key="app/src/main/res/layout/activity_main.xml" value="0.2739730834960938" />
