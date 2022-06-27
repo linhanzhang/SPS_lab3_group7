@@ -2,6 +2,7 @@ package com.example.myapplication.particles;
 
 import android.graphics.Canvas;
 import android.os.Build;
+import android.speech.tts.TextToSpeech;
 import android.util.Log;
 
 import androidx.annotation.RequiresApi;
@@ -50,6 +51,8 @@ public class ParticleCollection {
 
     private boolean inStairCase = false; // when in staircase, let the particles move slower
     private boolean converged = false;
+
+    TextToSpeech textToSpeech;
 
 
     public ParticleCollection(Layout layout){
@@ -122,15 +125,6 @@ public class ParticleCollection {
         Log.d("move distance", String.valueOf(pixelDistance));
         int countDead = 0;
 
-        // if in cell 13, 14, 15 move much slower
-//        if(currentCell == 14) distance = distance/6;
-
-
-        // if height changed, check if moving to another floor
-//        if((int)newHeight != (int)height){
-//            moveBetweenFloors(newHeight);
-//        }
-
         // if in floor 1 or 3, don't move particle anymore
         if(!keepStil) {
 
@@ -144,39 +138,6 @@ public class ParticleCollection {
 
                 if (countDead < particleList.size() -11) {
 
-//                    switch (direction) {
-//                        case LEFT:
-//                            p.x -= pixelDistance+ getRandomFromGaussian(0,Cell.mapMeterToPixel(0.1f));
-//                            break;
-//                        case UP:
-//                            p.y -= pixelDistance;
-//                            break;
-//                        case RIGHT:
-//                            p.x += pixelDistance;
-//                            break;
-//                        case DOWN:
-//                            p.y += pixelDistance;
-//                            break;
-//
-//                    }
-//                    float currDistance;
-//                    switch (layout.getCellfromCoordination(p.x,p.y)){
-//                        case 13:
-//                        case 14:
-//                        case 15:
-////                            if(direction == 90 || direction == 270){
-////                                continue;
-////                            }
-//                            currDistance = distance/10;
-//                            System.out.println("curr is "+currDistance);
-//                            break;
-//                        default:
-//                            currDistance = distance;
-//
-//                    }
-
-
-
                     moveWithRandomNoise(p,direction,distance);
                     //
                     if (layout.detectOutAllCell(p) || layout.collide(p, lastX,lastY,p.x,p.y)) {
@@ -185,6 +146,10 @@ public class ParticleCollection {
                     } else {
                         // get new cell id
                         p.cell = layout.getCellfromCoordination(p.x, p.y);
+                        if((floor==1||floor==3)&!(p.cell==13||p.cell==14||p.cell==15||p.cell==16)){
+                            p.alive = false;
+                            countDead++;
+                        }
                     }
                 } else {
                    // detectCollision++;  // TODO: Disable collision detection
@@ -265,21 +230,6 @@ public class ParticleCollection {
      * @param
      * @param numResample
      */
-
-//    public void resampleAroundParticle(Particle p, int numResample){
-//        for(int i=0; i<numResample; i++){
-//            // std might need CHANGE later
-//
-//            // make sure that the resampled particle is inside scope?
-//            int x = 0;
-//            int y = 0;
-//            x = (int) getRandomFromGaussian(p.x, 2);
-//            y = (int) getRandomFromGaussian(p.y, 2);
-//            // might need CHANGE later
-//            Particle newParticle = new Particle(x,y,layout.getCellfromCoordination(x,y));
-//            particleList.add(newParticle);
-//        }
-//    }
 
     public void resampleAroundParticleSet(List<Particle> maxWeightList, int numResample){
 
@@ -413,7 +363,7 @@ public class ParticleCollection {
           //  keepStil = true;
         }
         // move from cell 14 to cell 13
-        if(floor == 2 && inRange(newHeight, 46.5f,49F)){
+        else if(floor == 2 && inRange(newHeight, 46.5f,49F)){
 //            for(int i=0;i<particleList.size();i++){
 //                Particle p = particleList.get(i);
 //                p.y += 30;
@@ -424,7 +374,7 @@ public class ParticleCollection {
            // keepStil = true;
         }
         // move from cell 13 to cell 14
-        if(floor ==1 && inRange(newHeight, 50.30F, 50.6f)){
+        else if(floor ==1 && inRange(newHeight, 50.30F, 52f)){  //50.6f
 //            for(int i=0;i<particleList.size();i++){
 //                Particle p = particleList.get(i);
 //                p.y -= 30;
@@ -435,7 +385,7 @@ public class ParticleCollection {
            // keepStil = false;
         }
         // move from cell 15 to cell 14
-        if(floor ==3 && inRange(newHeight, 50.30F,50.6f)){
+        else if(floor ==3 && inRange(newHeight, 50.30F,52f)){
 //            for(int i=0;i<particleList.size();i++){
 //                Particle p = particleList.get(i);
 //                p.y -= 60;
@@ -473,29 +423,29 @@ public class ParticleCollection {
         Random random = new Random();
         int var = 1;
 
-        if(1==1) {
-            switch (layout.getCellfromCoordination(p.x, p.y)) {
-                case 16:
-                    if ((converged) && (direction == 180 || direction == 0)) {
+
+        switch (layout.getCellfromCoordination(p.x, p.y)) {
+            case 16:
+                if ((converged) && (direction == 180 || direction == 0)) {
+                    return;
+                }
+                stepDistance = stepDistance / 3;
+                var = 3;
+               // System.out.println("in stairs, stepDistance is" + stepDistance);
+                break;
+            case 13:
+            case 14:
+            case 15:
+                if(converged) {
+                    if (direction == 180 || direction == 0) {
                         return;
                     }
-                    stepDistance = stepDistance / 3;
-                    var = 3;
-                   // System.out.println("in stairs, stepDistance is" + stepDistance);
-                    break;
-                case 13:
-                case 14:
-                case 15:
-                    if(converged) {
-                        if (direction == 180 || direction == 0) {
-                            return;
-                        }
-                    }
-                    break;
-                default:
+                }
+                break;
+            default:
 
-            }
         }
+
 
         float noiseStepDistance = (float)( stepDistance+ (random.nextFloat()*0.1-0.05)/var);
         float noiseStepAngle = getRandomFromGaussian(direction,8);    // 5

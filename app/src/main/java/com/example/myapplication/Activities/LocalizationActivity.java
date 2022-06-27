@@ -22,6 +22,7 @@ import android.location.Location;
 import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.os.Looper;
+import android.speech.tts.TextToSpeech;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -35,6 +36,7 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import com.example.myapplication.R;
+import com.example.myapplication.Utils.Speecher;
 import com.example.myapplication.map.Cell;
 import com.example.myapplication.map.Layout;
 import com.example.myapplication.motion.StepCounter;
@@ -58,6 +60,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Date;
 import java.util.Calendar;
+import java.util.Locale;
 
 public class LocalizationActivity extends AppCompatActivity implements SensorEventListener {
     private FusedLocationProviderClient fusedLocationClient;
@@ -74,8 +77,11 @@ public class LocalizationActivity extends AppCompatActivity implements SensorEve
     private Layout layout;
     private Canvas canvas;
     private ParticleCollection pc;
+
     private float stepDistance;
     private float refDirection;
+    private float threshold;
+
     private final float tolerateWindow = 45;
     // Gravity for accelerometer data
     private float[] gravity = new float[3];
@@ -107,9 +113,12 @@ public class LocalizationActivity extends AppCompatActivity implements SensorEve
     public float height;
 
     private int counter = 0;
-    private int countdown = 0;
-    private Calendar c1;
+
     private long lastdateOne;
+
+    private TextToSpeech textToSpeech = null;
+    private int lastCell;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -154,27 +163,14 @@ public class LocalizationActivity extends AppCompatActivity implements SensorEve
         getLayoutCanvas();
 
         step = 0;
+        lastCell = 1;
 
         /**
          *  Default value
          */
-//        stepDistance = (float) 0.6;
-//        refDirection = -110;
 
         pc = null;
         sc = new StepCounter();
-
-//        // creating a Calendar object
-//        c1 = Calendar.getInstance();
-//        // set Month
-//        // MONTH starts with 0 i.e. ( 0 - Jan)
-//        c1.set(Calendar.MONTH, 6);
-//
-//        // set Date
-//        c1.set(Calendar.DATE, 24);
-//
-//        // set Year
-//        c1.set(Calendar.YEAR, 2022);
 
         locationRequest = locationRequest.create();
         locationRequest.setInterval(1000);
@@ -197,6 +193,15 @@ public class LocalizationActivity extends AppCompatActivity implements SensorEve
                         }
                         else {
                             textCell.setText("cell " + String.valueOf(predictCell));
+                        }
+                        if(predictCell != lastCell){
+                            if(predictCell == 16){
+                                startAuto("You are walking on stairs");
+                            }
+                            else {
+                                startAuto("Cell " + Speecher.mapNumToWord(predictCell));
+                            }
+                            lastCell = predictCell;
                         }
                     }
                     height = newHeight;
@@ -221,8 +226,6 @@ public class LocalizationActivity extends AppCompatActivity implements SensorEve
             public void onTick(long millisUntilFinished) {
                 fusedLocationClient = LocationServices.getFusedLocationProviderClient(LocalizationActivity.this);
                 getLocation();
-
-
             }
 
             public void onFinish() {
@@ -235,6 +238,7 @@ public class LocalizationActivity extends AppCompatActivity implements SensorEve
         if (bundle != null) {
             stepDistance = bundle.getFloat("stepDistance");
             refDirection = bundle.getFloat("refDirection");
+            threshold = bundle.getFloat("threshold");
 
             for (String key : bundle.keySet()) {
                 Log.d("Bundle Debug locaa", key + " = \"" + bundle.get(key) + "\"");
@@ -288,7 +292,7 @@ public class LocalizationActivity extends AppCompatActivity implements SensorEve
             }
         });
 
-
+        initTTS();
     }
 
     @Override
@@ -317,43 +321,18 @@ public class LocalizationActivity extends AppCompatActivity implements SensorEve
                 gravity[1] = smoothed[1];
                 gravity[2] = smoothed[2];
 
-                countdown ++;
 
                 float currentvectorSum = sc.getAccelRes(smoothed);
 
-//                if (currentvectorSum < 8.5 && inStep == false) {  //para 9.0
-//                    inStep = true;
-//                }
-//                if (currentvectorSum > 0.6 && inStep == true && countdown >50) {   //para 10.5
-//                    inStep = false;
-//                    step++;
-//                    countdown = 0;
-
-                // creating a Calendar object
-//                c1 = Calendar.getInstance();
-//                // set Month
-//                // MONTH starts with 0 i.e. ( 0 - Jan)
-//                c1.set(Calendar.MONTH, 6);
-//
-//                // set Date
-//                c1.set(Calendar.DATE, 24);
-//
-//                // set Year
-//                c1.set(Calendar.YEAR, 2022);
 
                 Date date = new Date();
 
 //                System.out.println(date.getTime());
-                if (currentvectorSum > 3.5 && date.getTime() - lastdateOne > 600) {   //para 10.5 //para= 4
+                if (currentvectorSum > threshold && date.getTime() - lastdateOne > 600) {   //para 10.5 //para= 4
                     inStep = false;
                     step++;
                     lastdateOne = date.getTime();
                     System.out.println(lastdateOne);
-
-//                    if(c1.getTime().getTime() - lastdateOne > 500){
-//
-//                    }
-                  //  countdown = 0;
 
                     // restart rotation sensor every 10 steps
                     if(step % 10 == 0){
@@ -370,6 +349,15 @@ public class LocalizationActivity extends AppCompatActivity implements SensorEve
                     }
                     else {
                         textCell.setText("cell " + String.valueOf(predictCell));
+                    }
+                    if(predictCell != lastCell){
+                        if(predictCell == 16){
+                            startAuto("You are walking on stairs");
+                        }
+                        else {
+                            startAuto("Cell " + Speecher.mapNumToWord(predictCell));
+                        }
+                        lastCell = predictCell;
                     }
 
                     System.out.println("varience is------->"+pc.getVariance());
@@ -546,6 +534,27 @@ public class LocalizationActivity extends AppCompatActivity implements SensorEve
     private void reStartRotationSensor(){
         sensorManager.unregisterListener(LocalizationActivity.this, rotationSensor);
         sensorManager.registerListener(LocalizationActivity.this, rotationSensor, SensorManager.SENSOR_DELAY_FASTEST);
+    }
+
+    private void initTTS(){
+        textToSpeech = new TextToSpeech(this, new TextToSpeech.OnInitListener() {
+            @Override
+            public void onInit(int status) {
+                if (status == TextToSpeech.SUCCESS) {
+                    textToSpeech.setSpeechRate(0.7f);
+                    int result = textToSpeech.setLanguage(Locale.US);
+                    //String text = speakText.getText().toString();
+                    //textToSpeech.speak("hello world", TextToSpeech.QUEUE_FLUSH, null, null);
+                }
+            }
+        });
+
+    }
+
+
+    private void startAuto(String data) {
+        textToSpeech.speak(data, TextToSpeech.QUEUE_FLUSH, null, null);
+
     }
 
 

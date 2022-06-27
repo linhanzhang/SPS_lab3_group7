@@ -22,6 +22,7 @@ import com.example.myapplication.R;
 import com.example.myapplication.map.Cell;
 import com.example.myapplication.motion.StepCounter;
 
+import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -33,21 +34,28 @@ public class CalibrationActivity extends AppCompatActivity implements SensorEven
     private Sensor accSensor;
     private TextView textInstruction;
     private TextView textInstruction2;
+    private TextView textInstruction3;
     private TextView textStep;
+    private TextView textStep2;
     private TextView textOrientation;
-    private TextView textThreshold;
+    private TextView textViewThreshold;
     private Button startStep;
+    private Button startCountingStep;
     private Button endStep;
+    private Button endCountingStep;
     private Button startAngle;
     private Button endAngle;
     private Button exit;
+    private Button buttonPlus1;
+    private Button buttonMinus1;
+
     private int step;
     private float stepDistance=-1; // default value
     private float averageDirection=-1; // default value
     private List<Float> directionList;
    // private final float MAXSTEPLEN = (float) 0.6; // to be changed
     private SeekBar seek;
-    private double threshold;
+    private float threshold=3.5f;
     // Gravity for accelerometer data
     private float[] gravity = new float[3];
     // smoothed values
@@ -63,7 +71,8 @@ public class CalibrationActivity extends AppCompatActivity implements SensorEven
     boolean startCountStep = false;
     boolean startMeasureAngle = false;
 
-    private int countdown = 0;
+    private long lastdateOne;
+    private int stepOnCountingType = 0; // 1 means step length calibration, 2 means threshold calibration
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -79,14 +88,22 @@ public class CalibrationActivity extends AppCompatActivity implements SensorEven
 
         textInstruction = (TextView) findViewById(R.id.textViewInstruction);
         textInstruction2 = (TextView) findViewById(R.id.textViewInstruction2);
+        textInstruction3 = (TextView) findViewById(R.id.textViewInstruction3);
         textStep = (TextView) findViewById(R.id.textViewStep);
-
+        textStep2 = (TextView) findViewById(R.id.textViewStep2);
         textOrientation = (TextView) findViewById(R.id.textViewOrientation);
+        textViewThreshold = (TextView) findViewById(R.id.textViewThreshold);
 
         startStep = (Button) findViewById(R.id.buttonStartCalibStep);
+        startCountingStep = (Button) findViewById(R.id.buttonStartStep);
         endStep = (Button) findViewById(R.id.buttonEndCalibStep);
+        endCountingStep = (Button) findViewById(R.id.buttonEndStep);
         startAngle = (Button) findViewById(R.id.buttonStartCalibAngle);
         endAngle = (Button) findViewById(R.id.buttonEndCalibAngle);
+        buttonPlus1 = (Button) findViewById(R.id.buttonPlus1);
+        buttonMinus1 = (Button) findViewById(R.id.buttonMinus1);
+
+
         exit = (Button) findViewById(R.id.buttonReturn);
       //  textInstruction.setText("Please stand at the left side of the room \n and click START button to start calibration");
         textStep.setText("step count:"+step);
@@ -98,20 +115,52 @@ public class CalibrationActivity extends AppCompatActivity implements SensorEven
             @Override
             public void onClick(View view) {
 
-                directionList = new LinkedList<>();
                 textStep.setText("initial step:"+step);
                 startCountStep = true;
+                stepOnCountingType = 1;
                 textInstruction.setText("calibration starts, please walk to the other end of the room");
+
+                Date date = new Date();
+                lastdateOne = date.getTime();
+
             }
         });
+
+        startCountingStep.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+
+                textStep.setText("initial step:"+step);
+                startCountStep = true;
+                stepOnCountingType = 2;
+                textInstruction3.setText("calibration starts, please walk and adjust the threshold");
+
+                Date date = new Date();
+                lastdateOne = date.getTime();
+
+            }
+        });
+
+
 
         endStep.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 stepDistance = distance/step;
                 step = 0;
+                stepOnCountingType = 0;
                 startCountStep = false;
                 textInstruction.setText("calibration ends, your average step distance is \n"+ stepDistance+" m");
+            }
+        });
+
+        endCountingStep.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                step = 0;
+                stepOnCountingType = 0;
+                startCountStep = false;
+                textInstruction3.setText("the threshold you choose is"+threshold);
             }
         });
 
@@ -141,6 +190,23 @@ public class CalibrationActivity extends AppCompatActivity implements SensorEven
             }
         });
 
+        buttonPlus1.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                threshold+=0.1;
+                textViewThreshold.setText("threshold:  "+threshold);
+            }
+        });
+
+        buttonMinus1.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                threshold-=0.1;
+                textViewThreshold.setText("threshold: "+threshold);
+            }
+        });
+
+
         /**
          *  Go back to main menu and send the calibrated value to main activity (if not calibrated then send default value)
          */
@@ -160,6 +226,7 @@ public class CalibrationActivity extends AppCompatActivity implements SensorEven
                 if(averageDirection!=-1) {
                     resultIntent.putExtra("refDirection", averageDirection);
                 }
+                resultIntent.putExtra("threshold", threshold);
                 setResult(Activity.RESULT_OK, resultIntent);
                 finish();
 
@@ -202,21 +269,27 @@ public class CalibrationActivity extends AppCompatActivity implements SensorEven
             gravity[1] = smoothed[1];
             gravity[2] = smoothed[2];
 
-            countdown ++;
             float currentvectorSum = StepCounter.getAccelRes(smoothed);
 
-            if (currentvectorSum < 9.0 && inStep == false) {  //para
-                inStep = true;
-            }
-            if (currentvectorSum > 10.5 && inStep == true && countdown >50) {   //para
-                countdown = 0;
-                inStep = false;
+            Date date = new Date();
+
+            System.out.println(currentvectorSum);
+            if (currentvectorSum > threshold && date.getTime() - lastdateOne > 600) {   //para 10.5 //para= 4
+
                 step++;
+                switch (stepOnCountingType){
+                    case 1:
+                        textStep.setText("Step: " + step);
+                        break;
+                    case 2:
+                        textStep2.setText("Step: " + step);
+                        break;
+                    default:
+                }
 
-                //Log.d("TAG_ACCELEROMETER", "\t" + numSteps);
-                textStep.setText("Step: " + step);
+
+                lastdateOne = date.getTime();
             }
-
 
         }
 

@@ -47,6 +47,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     private float stepDistance= (float) 0.66;
     private float refDirection=-110;
+    private float threshold= 3.5F;
 
     /**
      * The sensor manager object.
@@ -105,6 +106,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     Intent intentLoc = new Intent(MainActivity.this, LocalizationActivity.class);
                     intentLoc.putExtra("stepDistance",stepDistance);
                     intentLoc.putExtra("refDirection",refDirection);
+                    intentLoc.putExtra("threshold",threshold);
                     startActivity(intentLoc);
                 }
             }
@@ -139,12 +141,14 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         if (resultCode == Activity.RESULT_OK && requestCode == 1) {
             stepDistance = data.getFloatExtra("stepDistance",stepDistance);
             refDirection = data.getFloatExtra("refDirection",refDirection);
+            threshold = data.getFloatExtra("threshold",threshold);
 
             System.out.println("finish and return to main, step distance is"+stepDistance);
             System.out.println("finish and return to main, refDirection is"+refDirection);
 
             textReminder.setText("step length = "+stepDistance+
-                    "ref direction = "+refDirection );
+                    "\n ref direction = "+refDirection+
+                    "\n threshold = "+threshold);
 
         }
     }
