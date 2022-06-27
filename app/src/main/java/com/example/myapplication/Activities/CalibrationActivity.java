@@ -2,6 +2,7 @@ package com.example.myapplication.Activities;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
@@ -41,10 +42,12 @@ public class CalibrationActivity extends AppCompatActivity implements SensorEven
     private Button endAngle;
     private Button exit;
     private int step;
-    private float stepDistance = (float) 0.6; // default value
-    private float averageDirection = -110; // default value
+
+    private float stepDistance=-1; // default value
+    private float averageDirection=-1; // default value
     private List<Float> directionList;
-    private final float MAXSTEPLEN = (float) 0.6; // to be changed
+   // private final float MAXSTEPLEN = (float) 0.6; // to be changed
+   
     private SeekBar seek;
     private double threshold;
     // Gravity for accelerometer data
@@ -150,18 +153,38 @@ public class CalibrationActivity extends AppCompatActivity implements SensorEven
 
                 sensorManager.unregisterListener(CalibrationActivity.this, accSensor);
                 sensorManager.unregisterListener(CalibrationActivity.this, rotationSensor);
-                Intent intentMain = new Intent(CalibrationActivity.this, MainActivity.class);
+                //Intent intentMain = new Intent(CalibrationActivity.this, MainActivity.class);
+                Intent resultIntent = new Intent();
+
+                if(stepDistance!=-1) {
+                    resultIntent.putExtra("stepDistance", stepDistance);
+                }
+                if(averageDirection!=-1) {
+                    resultIntent.putExtra("refDirection", averageDirection);
+                }
+                setResult(Activity.RESULT_OK, resultIntent);
+                finish();
+
 
                 intentMain.putExtra("stepDistance", stepDistance);
                 intentMain.putExtra("refDirection", averageDirection);
 
                 System.out.println("calibrated step distance is "+stepDistance);
 
-                startActivity(intentMain);
+//                startActivity(intentMain);
 
             }
 
         });
+
+    }
+
+    @Override
+    public void onDestroy() {
+
+        super.onDestroy();
+        System.out.println("destroyed!!!!!");
+
     }
 
     @Override

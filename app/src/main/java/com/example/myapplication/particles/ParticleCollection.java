@@ -9,8 +9,6 @@ import androidx.annotation.RequiresApi;
 import com.example.myapplication.map.Cell;
 import com.example.myapplication.map.Layout;
 
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
@@ -52,6 +50,9 @@ public class ParticleCollection {
 
     private boolean inStairCase = false; // when in staircase, let the particles move slower
 
+    private boolean converged = false;
+
+
 
     public ParticleCollection(Layout layout){
         this.layout = layout;
@@ -66,7 +67,9 @@ public class ParticleCollection {
         // don't initialize at Cell 13 14 15 cuz we won't start there
         for(int i=0; i<CELLNUM-3;i++){
             // skip cell 8
-            if(i == 7) continue;
+
+            //if(i == 7) continue;
+
             Cell cell = layout.getCellList().get(i);
             // the num of particles is decided by prior probability, namely the area of cell
             int numOfParticle = (int) (cell.area / RATIO);
@@ -74,6 +77,17 @@ public class ParticleCollection {
             totalNumParticles = particleList.size();
 
         }
+
+        // don't initialize at Cell 13 14 15 cuz we won't start there
+        for(int i=CELLNUM-3; i<CELLNUM;i++){
+            Cell cell = layout.getCellList().get(i);
+            // the num of particles is decided by prior probability, namely the area of cell
+            int numOfParticle = (int) ((cell.area / RATIO)/3);
+            initializeParticleinCell(cell.id,cell.left,cell.top,cell.right,cell.bottom,numOfParticle);
+            totalNumParticles = particleList.size();
+
+        }
+
     }
 
     public void initializeParticleinCell(int cellId, float left, float top, float right, float bottom, int numParticle){
@@ -117,9 +131,11 @@ public class ParticleCollection {
 
 
         // if height changed, check if moving to another floor
-        if((int)newHeight != (int)height){
-            moveBetweenFloors(newHeight);
-        }
+
+//        if((int)newHeight != (int)height){
+//            moveBetweenFloors(newHeight);
+//        }
+
 
         // if in floor 1 or 3, don't move particle anymore
         if(!keepStil) {
@@ -198,6 +214,10 @@ public class ParticleCollection {
         }
         updateParticleSet();
         drawParticleCollection(canvas);
+
+        if(converged()){
+            converged = true;
+        }
 
     }
 
@@ -344,7 +364,7 @@ public class ParticleCollection {
 
 
         List <Integer> weightList = new LinkedList<>();
-        for(int i=0 ;i<CELLNUM; i++){
+        for(int i=0 ;i<CELLNUM+1; i++){
             weightList.add(0);
         }
 
@@ -358,7 +378,7 @@ public class ParticleCollection {
 
         int maxWeightSum = -1;
         int maxWeightCell = -1;
-        for(int i=0;i<CELLNUM;i++){
+        for(int i=0;i<CELLNUM+1;i++){
             if(weightList.get(i)>maxWeightSum){
                 maxWeightSum = weightList.get(i);
                 maxWeightCell = i+1;
@@ -385,6 +405,9 @@ public class ParticleCollection {
 //        floor2 -> 50 ~ 53.5
 //        floor1 -> 46.5 ~ 49
 //        floor3 -> 54 ~ 57
+
+        // TODO: may need to change the height range of floor 2
+
         // move from cell 14 to cell 15
         if(floor == 2 && inRange(newHeight, 52.80F, 57F)){
 //            for(int i=0;i<particleList.size();i++){
@@ -476,6 +499,75 @@ public class ParticleCollection {
         p.x += noiseStepDistance* Math.cos(Math.toRadians(noiseStepAngle));
         p.y += noiseStepDistance* Math.sin(Math.toRadians(noiseStepAngle));
     }
+
+
+    void moveWithRandomNoise(Particle p, int direction, float stepDistance){
+        //float noiseStepDistance = getRandomFromGaussian(stepDistance,0.06f); //15 is fine  // 0.3f  // 0.1f
+        Random random = new Random();
+        int var = 1;
+
+        if(1==1) {
+            switch (layout.getCellfromCoordination(p.x, p.y)) {
+                case 16:
+                    if ((converged) && (direction == 180 || direction == 0)) {
+                        return;
+                    }
+                    stepDistance = stepDistance / 3;
+                    var = 3;
+                   // System.out.println("in stairs, stepDistance is" + stepDistance);
+                    break;
+                case 13:
+                case 14:
+                case 15:
+                    if(converged) {
+                        if (direction == 180 || direction == 0) {
+                            return;
+                        }
+                    }
+                    break;
+                default:
+
+            }
+        }
+
+        float noiseStepDistance = (float)( stepDistance+ (random.nextFloat()*0.1-0.05)/var);
+        float noiseStepAngle = getRandomFromGaussian(direction,8);    // 5
+        p.x += noiseStepDistance* Math.cos(Math.toRadians(noiseStepAngle));
+        p.y += noiseStepDistance* Math.sin(Math.toRadians(noiseStepAngle));
+    }
+
+    public boolean converged() {
+        if (getVariance() < 0.44) {
+            System.out.println("converged!!!!!!!!");
+            return true;
+        } else {
+            System.out.println("unconverged???????");
+            return false;
+        }
+    }
+
+        public float getVariance(){
+            float meanX=0;
+            float meanY=0;
+            for(int i=0; i<particleList.size();i++){
+                meanX+=particleList.get(i).x;
+                meanY+=particleList.get(i).y;
+            }
+
+            meanX/=particleList.size();
+            meanY/=particleList.size();
+            float variance=0;
+            for (int i = 0; i < particleList.size(); i++) {
+                Particle p = particleList.get(i);
+                variance = (float) (variance + Math.sqrt((Math.pow((p.x - meanX), 2))+(Math.pow((p.y - meanY), 2))));
+            }
+            variance = variance / particleList.size();
+
+           // System.out.println("variance is ---->"+variance);
+            return variance;
+        }
+
+
 
 
 }

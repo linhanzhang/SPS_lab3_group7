@@ -158,8 +158,9 @@ public class LocalizationActivity extends AppCompatActivity implements SensorEve
         /**
          *  Default value
          */
-        stepDistance = (float) 0.6;
-        refDirection = -110;
+//        stepDistance = (float) 0.6;
+//        refDirection = -110;
+
 
         pc = null;
         sc = new StepCounter();
@@ -187,8 +188,21 @@ public class LocalizationActivity extends AppCompatActivity implements SensorEve
                     return;
                 }
                 for (Location location : locationResult.getLocations()) {
-                    height = (float) location.getAltitude();
-                    degreeTV.setText("Height: " +String.format(".%1f",height));
+
+                    float newHeight = (float) location.getAltitude();
+                    degreeTV.setText("Height: " +String.format(".%1f",newHeight));
+                    if(pc!=null && newHeight != height){
+                        pc.moveBetweenFloors(newHeight);
+                        int predictCell = pc.getCellwithMaxWeight();
+                        if(predictCell == 16){
+                            textCell.setText("Stairs");
+                        }
+                        else {
+                            textCell.setText("cell " + String.valueOf(predictCell));
+                        }
+                    }
+                    height = newHeight;
+
 
                 }
             }
@@ -271,8 +285,9 @@ public class LocalizationActivity extends AppCompatActivity implements SensorEve
                 sensorManager.unregisterListener(LocalizationActivity.this, rotationSensor);
                 sensorManager.unregisterListener(LocalizationActivity.this, accSensor);
 
-                Intent intentMain = new Intent(LocalizationActivity.this, MainActivity.class);
-                startActivity(intentMain);
+//                Intent intentMain = new Intent(LocalizationActivity.this, MainActivity.class);
+//                startActivity(intentMain);
+                finish();
             }
         });
 
@@ -353,7 +368,14 @@ public class LocalizationActivity extends AppCompatActivity implements SensorEve
 
                     pc.moveParticles(canvas, stepDistance, calibratedDirection,height);  //ATTENTION: to be changed
                     int predictCell = pc.getCellwithMaxWeight();
-                    textCell.setText("cell " + String.valueOf(predictCell));
+                    if(predictCell == 16){
+                        textCell.setText("Stairs");
+                    }
+                    else {
+                        textCell.setText("cell " + String.valueOf(predictCell));
+                    }
+
+                    System.out.println("varience is------->"+pc.getVariance());
                 }
 
 

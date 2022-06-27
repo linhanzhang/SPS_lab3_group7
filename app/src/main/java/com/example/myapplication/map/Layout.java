@@ -43,6 +43,10 @@ public class Layout {
         cellList.add(new Cell(14, 14.5f,4.25f, 16.79f, 8.58f));  //original bottom 8,58f
         cellList.add(new Cell(15, 14.5f,4.25f, 16.79f, 8.58f));  //original bottom 8,58f
 
+        cellList.add(new Cell(16, 14.5f,5.58f, 16.79f, 8.58f));
+
+        // if(x< && x>14.5f && y<5.58f && y>7.55f)
+
         // left wall to the door of cell 8
 //        ShapeDrawable cell8left = new ShapeDrawable(new RectShape()); //门左边 20.09
 //        cell8left.setBounds(Cell.mapMeterToPixel(18.34f), Cell.mapMeterToPixel(4.05f), Cell.mapMeterToPixel(20.09f), Cell.mapMeterToPixel(4.65f) );
@@ -217,6 +221,20 @@ public class Layout {
      * @return the cell id
      */
     public int getCellfromCoordination(float x, float y){
+
+
+        // 16 is stairs
+//        if(x< && x>14.5f && y<5.58f && y>7.55f){
+//            System.out.println("Stair Detected~~~~");
+//            return 16;
+//        }
+        if(cellList.get(15).detectCoordinationInScope(x,y)) {
+            //System.out.println("Stair Detected~~~~");
+            return 16;
+        }
+//        14.5f,4.25f, 16.79f, 8.58f
+
+
         for(int i=0;i<CELLNUM;i++){
             if(cellList.get(i).detectCoordinationInScope(x,y)){
                 return (i+1);

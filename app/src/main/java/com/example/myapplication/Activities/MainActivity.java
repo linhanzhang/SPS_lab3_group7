@@ -14,6 +14,7 @@
 //}
 package com.example.myapplication.Activities;
 import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.graphics.Bitmap;
@@ -44,8 +45,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private static final String TAG = "DEBUG";
 
 
-    private float stepDistance= (float) 0.6;
-    private float refDirection;
+
+    private float stepDistance= (float) 0.66;
+    private float refDirection=-110;
+
 
     /**
      * The sensor manager object.
@@ -67,23 +70,26 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         localization = (Button) findViewById(R.id.buttonLocalization);
         textReminder = (TextView) findViewById(R.id.textViewReminder);
 
+        textReminder.setText("step length = "+stepDistance+
+                "ref direction = "+refDirection );
+
         // get step distance from Calibration Activity
-        Bundle bundle = getIntent().getExtras();
-        if(bundle!=null){
-            stepDistance = bundle.getFloat("stepDistance");
-            refDirection = bundle.getFloat("refDirection");
-            textReminder.setText("step length = "+stepDistance+
-                                 "ref direction = "+refDirection );
-        }
-        else{
-            System.out.println("No step!!!!");
-        }
+//        Bundle bundle = getIntent().getExtras();
+//        if(bundle!=null){
+//            stepDistance = bundle.getFloat("stepDistance");
+//            refDirection = bundle.getFloat("refDirection");
+//            textReminder.setText("step length = "+stepDistance+
+//                                 "ref direction = "+refDirection );
+//        }
+//        else{
+//            System.out.println("No step!!!!");
+//        }
 
         calibration.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 Intent intentCalib=new Intent(MainActivity.this, CalibrationActivity.class);
-                startActivity(intentCalib);
+                startActivityForResult(intentCalib,1);
             }
         });
 
@@ -127,5 +133,21 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     public void onClick(View v)  //监听函数
     {
 
+    }
+
+    @Override
+    protected void onActivityResult (int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (resultCode == Activity.RESULT_OK && requestCode == 1) {
+            stepDistance = data.getFloatExtra("stepDistance",stepDistance);
+            refDirection = data.getFloatExtra("refDirection",refDirection);
+
+            System.out.println("finish and return to main, step distance is"+stepDistance);
+            System.out.println("finish and return to main, refDirection is"+refDirection);
+
+            textReminder.setText("step length = "+stepDistance+
+                    "ref direction = "+refDirection );
+
+        }
     }
 }
