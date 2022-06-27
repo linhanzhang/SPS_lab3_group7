@@ -49,7 +49,9 @@ public class ParticleCollection {
     private final float resampleVARIANCEY = 1/13;        // 2/12;
 
     private boolean inStairCase = false; // when in staircase, let the particles move slower
+
     private boolean converged = false;
+
 
 
     public ParticleCollection(Layout layout){
@@ -65,7 +67,9 @@ public class ParticleCollection {
         // don't initialize at Cell 13 14 15 cuz we won't start there
         for(int i=0; i<CELLNUM-3;i++){
             // skip cell 8
+
             //if(i == 7) continue;
+
             Cell cell = layout.getCellList().get(i);
             // the num of particles is decided by prior probability, namely the area of cell
             int numOfParticle = (int) (cell.area / RATIO);
@@ -127,9 +131,11 @@ public class ParticleCollection {
 
 
         // if height changed, check if moving to another floor
+
 //        if((int)newHeight != (int)height){
 //            moveBetweenFloors(newHeight);
 //        }
+
 
         // if in floor 1 or 3, don't move particle anymore
         if(!keepStil) {
@@ -401,6 +407,7 @@ public class ParticleCollection {
 //        floor3 -> 54 ~ 57
 
         // TODO: may need to change the height range of floor 2
+
         // move from cell 14 to cell 15
         if(floor == 2 && inRange(newHeight, 52.80F, 57F)){
 //            for(int i=0;i<particleList.size();i++){
@@ -465,6 +472,32 @@ public class ParticleCollection {
             initializeParticleinCell(cell.id,cell.left,cell.top,cell.right,cell.bottom,numOfParticle);
 
         }
+    }
+
+    void moveWithRandomNoise(Particle p, int direction, float stepDistance){
+        //float noiseStepDistance = getRandomFromGaussian(stepDistance,0.06f); //15 is fine  // 0.3f  // 0.1f
+        Random random = new Random();
+        int var = 1;
+
+        switch (layout.getCellfromCoordination(p.x,p.y)){
+            case 13:
+            case 14:
+            case 15:
+                            if(direction == 180 || direction == 0){
+                                return;
+                            }
+                stepDistance = stepDistance/3;
+                var = 3;
+                System.out.println("curr is "+stepDistance);
+                break;
+            default:
+
+        }
+
+        float noiseStepDistance = (float)( stepDistance+ (random.nextFloat()*0.1-0.05)/var);
+        float noiseStepAngle = getRandomFromGaussian(direction,8);    // 5
+        p.x += noiseStepDistance* Math.cos(Math.toRadians(noiseStepAngle));
+        p.y += noiseStepDistance* Math.sin(Math.toRadians(noiseStepAngle));
     }
 
 

@@ -56,7 +56,9 @@ public class StepCounter {
 //                + (Math.pow(curretACCEL[2], 2)));
 
         float res = (float) Math.pow((curretACCEL[2]-9.8),2);
+
        // System.out.println("Res is -------> "+res);
+
         return res;
     }
 }

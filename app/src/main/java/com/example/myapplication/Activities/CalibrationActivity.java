@@ -42,10 +42,12 @@ public class CalibrationActivity extends AppCompatActivity implements SensorEven
     private Button endAngle;
     private Button exit;
     private int step;
+
     private float stepDistance=-1; // default value
     private float averageDirection=-1; // default value
     private List<Float> directionList;
    // private final float MAXSTEPLEN = (float) 0.6; // to be changed
+   
     private SeekBar seek;
     private double threshold;
     // Gravity for accelerometer data
@@ -163,6 +165,10 @@ public class CalibrationActivity extends AppCompatActivity implements SensorEven
                 setResult(Activity.RESULT_OK, resultIntent);
                 finish();
 
+
+                intentMain.putExtra("stepDistance", stepDistance);
+                intentMain.putExtra("refDirection", averageDirection);
+
                 System.out.println("calibrated step distance is "+stepDistance);
 
 //                startActivity(intentMain);
@@ -170,6 +176,7 @@ public class CalibrationActivity extends AppCompatActivity implements SensorEven
             }
 
         });
+
     }
 
     @Override
@@ -177,6 +184,7 @@ public class CalibrationActivity extends AppCompatActivity implements SensorEven
 
         super.onDestroy();
         System.out.println("destroyed!!!!!");
+
     }
 
     @Override

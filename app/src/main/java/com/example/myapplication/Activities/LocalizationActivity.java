@@ -161,6 +161,7 @@ public class LocalizationActivity extends AppCompatActivity implements SensorEve
 //        stepDistance = (float) 0.6;
 //        refDirection = -110;
 
+
         pc = null;
         sc = new StepCounter();
 
@@ -187,6 +188,7 @@ public class LocalizationActivity extends AppCompatActivity implements SensorEve
                     return;
                 }
                 for (Location location : locationResult.getLocations()) {
+
                     float newHeight = (float) location.getAltitude();
                     degreeTV.setText("Height: " +String.format(".%1f",newHeight));
                     if(pc!=null && newHeight != height){
@@ -200,6 +202,7 @@ public class LocalizationActivity extends AppCompatActivity implements SensorEve
                         }
                     }
                     height = newHeight;
+
 
                 }
             }
