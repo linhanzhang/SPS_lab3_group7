@@ -25,7 +25,8 @@ public class ParticleCollection {
     /**
      *  RATIO = 1/(num of particles / pixel)
      */
-    public static final int RATIO = 20;
+//    public static final int RATIO = 20;
+    public static final float RATIO = (float) 0.1183;
 
     /**
      * Direction: is the direction in layout graph
@@ -41,9 +42,15 @@ public class ParticleCollection {
 
     private int detectCollision;
     private int currentCell;
-    private final int thresholdCOLLISION = 20;  // TODO: need change
+    private final int thresholdCOLLISION = 10;  // TODO: need change
 
     private boolean keepStil = false;
+
+    private final float resampleTHESDHOLD = 0.30f;    // original 0.1f
+    private final float resampleVARIANCEX = 2/13;        //3/12;
+    private final float resampleVARIANCEY = 1/13;        // 2/12;
+
+    private boolean inStairCase = false; // when in staircase, let the particles move slower
 
 
     public ParticleCollection(Layout layout){
@@ -58,21 +65,23 @@ public class ParticleCollection {
     public void initializeParticleSet(){
         // don't initialize at Cell 13 14 15 cuz we won't start there
         for(int i=0; i<CELLNUM-3;i++){
+            // skip cell 8
+            if(i == 7) continue;
             Cell cell = layout.getCellList().get(i);
             // the num of particles is decided by prior probability, namely the area of cell
-            int numOfParticle = cell.area / RATIO;
+            int numOfParticle = (int) (cell.area / RATIO);
             initializeParticleinCell(cell.id,cell.left,cell.top,cell.right,cell.bottom,numOfParticle);
             totalNumParticles = particleList.size();
 
         }
     }
 
-    public void initializeParticleinCell(int cellId, int left, int top, int right, int bottom, int numParticle){
+    public void initializeParticleinCell(int cellId, float left, float top, float right, float bottom, int numParticle){
         Random r = new Random();
         //randomly generate n particles in cell
         for(int i=0; i<numParticle;i++){
-            int x = r.nextInt(right-left)+left;
-            int y = r.nextInt(bottom-top)+top;
+            float x = r.nextFloat()*(right-left)+left;
+            float y = r.nextFloat()*(bottom-top)+top;
             Particle p = new Particle(x,y,cellId);
             particleList.add(p);
         }
@@ -96,13 +105,18 @@ public class ParticleCollection {
      * @param distance  unit: pixel
      * @param direction
      */
-    public void moveParticles(Canvas canvas, int distance, int direction, float newHeight){
+    public void moveParticles(Canvas canvas, float distance, int direction, float newHeight){
         Log.d("size of set", String.valueOf(particleList.size()));
         int count =0;
-        int pixelDistance = distance;
+        float pixelDistance = distance;
         Log.d("move distance", String.valueOf(pixelDistance));
         int countDead = 0;
 
+        // if in cell 13, 14, 15 move much slower
+//        if(currentCell == 14) distance = distance/6;
+
+
+        // if height changed, check if moving to another floor
         if((int)newHeight != (int)height){
             moveBetweenFloors(newHeight);
         }
@@ -112,26 +126,50 @@ public class ParticleCollection {
 
             for (int i = 0; i < particleList.size(); i++) {
                 Particle p = particleList.get(i);
+                float lastX = p.x;
+                float lastY = p.y;
                 // when less than 10% remains, don't do move particle anymore
-                if (countDead < particleList.size() * 9 / 10) {
+                // you can't let all particles die, otherwise you can't choose the max weight particles for resample
 
-                    switch (direction) {
-                        case LEFT:
-                            p.x -= pixelDistance;
-                            break;
-                        case UP:
-                            p.y -= pixelDistance;
-                            break;
-                        case RIGHT:
-                            p.x += pixelDistance;
-                            break;
-                        case DOWN:
-                            p.y += pixelDistance;
-                            break;
 
-                    }
+                if (countDead < particleList.size() -11) {
 
-                    if (layout.detectOutAllCell(p)) {
+//                    switch (direction) {
+//                        case LEFT:
+//                            p.x -= pixelDistance+ getRandomFromGaussian(0,Cell.mapMeterToPixel(0.1f));
+//                            break;
+//                        case UP:
+//                            p.y -= pixelDistance;
+//                            break;
+//                        case RIGHT:
+//                            p.x += pixelDistance;
+//                            break;
+//                        case DOWN:
+//                            p.y += pixelDistance;
+//                            break;
+//
+//                    }
+//                    float currDistance;
+//                    switch (layout.getCellfromCoordination(p.x,p.y)){
+//                        case 13:
+//                        case 14:
+//                        case 15:
+////                            if(direction == 90 || direction == 270){
+////                                continue;
+////                            }
+//                            currDistance = distance/10;
+//                            System.out.println("curr is "+currDistance);
+//                            break;
+//                        default:
+//                            currDistance = distance;
+//
+//                    }
+
+
+
+                    moveWithRandomNoise(p,direction,distance);
+                    //
+                    if (layout.detectOutAllCell(p) || layout.collide(p, lastX,lastY,p.x,p.y)) {
                         p.alive = false;
                         countDead++;
                     } else {
@@ -139,7 +177,7 @@ public class ParticleCollection {
                         p.cell = layout.getCellfromCoordination(p.x, p.y);
                     }
                 } else {
-                    detectCollision++;
+                   // detectCollision++;  // TODO: Disable collision detection
                     break;
                 }
 
@@ -181,7 +219,7 @@ public class ParticleCollection {
         particleList.removeIf(particle -> !particle.alive && particleList.size() != 0);
         // new particles will be added back to the particle list, total num of particle remains unchanged
         // if less than 70% left, need resample
-        if(particleList.size()<totalNumParticles*0.7) {
+        if(particleList.size()<totalNumParticles * resampleTHESDHOLD) {
             resampleParticles((totalNumParticles - countAlive));
         }
     }
@@ -239,13 +277,14 @@ public class ParticleCollection {
             Particle p = maxWeightList.get(i);
             for(int j=0; j<numResample/maxWeightList.size();j++){
                 // make sure that the resampled particle is inside scope?
-                int x = 0;
-                int y = 0;
-                x = (int) getRandomFromGaussian(p.x, 1);
-                y = (int) getRandomFromGaussian(p.y, 1);
+                float x;
+                float y;
+                x = getRandomFromGaussian(p.x, resampleVARIANCEX);
+                y = getRandomFromGaussian(p.y, resampleVARIANCEY);
 
                 // if x, y not in scope, then use particle over the old one instead
-                if(layout.detectOutAllCell(x,y)){
+                // check if the randomly selected location is valid
+                if(layout.detectOutAllCell(x,y) || layout.collide(new Particle(x,y,0),x,x,y,y)){
                     x = p.x;
                     y = p.y;
                 }
@@ -257,19 +296,19 @@ public class ParticleCollection {
                 numToResample --;
             }
         }
+
+        // 随机分配之前分剩下的particle
         if(numToResample > 0 ){
             Random ran = new Random();
             int index = ran.nextInt(maxWeightList.size());
             Particle p = maxWeightList.get(index);
             for(int i=0; i<numToResample; i++){
                 // make sure that the resampled particle is inside scope?
-                int x = 0;
-                int y = 0;
-                x = (int) getRandomFromGaussian(p.x, 1);
-                y = (int) getRandomFromGaussian(p.y, 1);
+                float x = getRandomFromGaussian(p.x, resampleVARIANCEX);
+                float y = (int) getRandomFromGaussian(p.y, resampleVARIANCEY);
 
                 // if x, y not in scope, then use particle over the old one instead
-                if(layout.detectOutAllCell(x,y)){
+                if(layout.detectOutAllCell(x,y) || layout.collide(new Particle(x,y,0),x,x,y,y)){
                     x = p.x;
                     y = p.y;
                 }
@@ -332,7 +371,7 @@ public class ParticleCollection {
 
         // walk from cell 6 to cell 14
         if(currentCell == 6 && maxWeightCell == 14){
-            keepStil = true;
+           // keepStil = true;
         }
         currentCell = maxWeightCell;
         return maxWeightCell;
@@ -343,8 +382,11 @@ public class ParticleCollection {
         // 14->13 13->14
         // 14->15 15->14
 
+//        floor2 -> 50 ~ 53.5
+//        floor1 -> 46.5 ~ 49
+//        floor3 -> 54 ~ 57
         // move from cell 14 to cell 15
-        if(floor == 2 && inRange(newHeight, 51, 52.5F)){
+        if(floor == 2 && inRange(newHeight, 52.80F, 57F)){
 //            for(int i=0;i<particleList.size();i++){
 //                Particle p = particleList.get(i);
 //                p.y += 60;
@@ -352,9 +394,10 @@ public class ParticleCollection {
 //            }
             floor = 3;
             height = newHeight;
+          //  keepStil = true;
         }
         // move from cell 14 to cell 13
-        if(floor == 2 && inRange(newHeight, 44,45.5F)){
+        if(floor == 2 && inRange(newHeight, 46.5f,49F)){
 //            for(int i=0;i<particleList.size();i++){
 //                Particle p = particleList.get(i);
 //                p.y += 30;
@@ -362,9 +405,10 @@ public class ParticleCollection {
 //            }
             floor = 1;
             height = newHeight;
+           // keepStil = true;
         }
         // move from cell 13 to cell 14
-        if(floor ==1 && inRange(newHeight, 47, 49)){
+        if(floor ==1 && inRange(newHeight, 50.30F, 50.6f)){
 //            for(int i=0;i<particleList.size();i++){
 //                Particle p = particleList.get(i);
 //                p.y -= 30;
@@ -372,9 +416,10 @@ public class ParticleCollection {
 //            }
             floor = 2;
             height = newHeight;
+           // keepStil = false;
         }
         // move from cell 15 to cell 14
-        if(floor ==3 && inRange(newHeight, 47,49)){
+        if(floor ==3 && inRange(newHeight, 50.30F,50.6f)){
 //            for(int i=0;i<particleList.size();i++){
 //                Particle p = particleList.get(i);
 //                p.y -= 60;
@@ -383,6 +428,7 @@ public class ParticleCollection {
             floor = 2;
             keepStil = false;
             height = newHeight;
+            keepStil = false;
         }
     }
 
@@ -403,6 +449,32 @@ public class ParticleCollection {
             initializeParticleinCell(cell.id,cell.left,cell.top,cell.right,cell.bottom,numOfParticle);
 
         }
+    }
+
+    void moveWithRandomNoise(Particle p, int direction, float stepDistance){
+        //float noiseStepDistance = getRandomFromGaussian(stepDistance,0.06f); //15 is fine  // 0.3f  // 0.1f
+        Random random = new Random();
+        int var = 1;
+
+        switch (layout.getCellfromCoordination(p.x,p.y)){
+            case 13:
+            case 14:
+            case 15:
+                            if(direction == 180 || direction == 0){
+                                return;
+                            }
+                stepDistance = stepDistance/3;
+                var = 3;
+                System.out.println("curr is "+stepDistance);
+                break;
+            default:
+
+        }
+
+        float noiseStepDistance = (float)( stepDistance+ (random.nextFloat()*0.1-0.05)/var);
+        float noiseStepAngle = getRandomFromGaussian(direction,8);    // 5
+        p.x += noiseStepDistance* Math.cos(Math.toRadians(noiseStepAngle));
+        p.y += noiseStepDistance* Math.sin(Math.toRadians(noiseStepAngle));
     }
 
 

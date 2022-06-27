@@ -9,13 +9,16 @@ import android.util.Log;
 
 import androidx.versionedparcelable.ParcelImpl;
 
+import com.example.myapplication.map.Cell;
+import com.example.myapplication.map.Layout;
+
 import java.util.Collection;
 import java.util.Collections;
 
 public class Particle implements Comparable<Particle> {
 
-    public int x;
-    public int y;
+    public float x;
+    public float y;
     public int weight;
     public boolean alive;
     public ShapeDrawable drawable;
@@ -24,7 +27,7 @@ public class Particle implements Comparable<Particle> {
      */
     public int cell;
 
-    public Particle(int x, int y, int cell) {
+    public Particle(float x, float y, int cell) {
         this.x = x;
         this.y = y;
         this.cell = cell;
@@ -38,20 +41,21 @@ public class Particle implements Comparable<Particle> {
        // ShapeDrawable drawable =  new ShapeDrawable(new OvalShape());
         drawable.getPaint().setColor(Color.RED);
         drawable.getPaint().setAntiAlias(true);
-        drawable.setBounds(x,y,x+3,y+3);
+        drawable.setBounds(Cell.mapMeterToPixel(x),Cell.mapMeterToPixel(y),Cell.mapMeterToPixel(x)+3,Cell.mapMeterToPixel(y)+3);
+     //   drawable.setBounds(x,y,x+3,y+3);
         //Log.d("x axis: ", String.valueOf(this.x));
         drawable.draw(canvas);
     }
 
-    public void clearParticle(Canvas canvas){
-        Log.d("clear","clear");
-        ShapeDrawable drawable =  new ShapeDrawable(new OvalShape());
-        drawable.getPaint().setColor(Color.WHITE);
-        drawable.getPaint().setAntiAlias(true);
-        drawable.setBounds(x,y,x+3,y+3);
-        drawable.draw(canvas);
-
-    }
+//    public void clearParticle(Canvas canvas){
+//        Log.d("clear","clear");
+//        ShapeDrawable drawable =  new ShapeDrawable(new OvalShape());
+//        drawable.getPaint().setColor(Color.WHITE);
+//        drawable.getPaint().setAntiAlias(true);
+//        drawable.setBounds(x,y,x+3,y+3);
+//        drawable.draw(canvas);
+//
+//    }
 
     @Override
     public int compareTo(Particle p) {

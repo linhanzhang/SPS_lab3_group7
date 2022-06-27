@@ -44,7 +44,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private static final String TAG = "DEBUG";
 
 
-    private float stepDistance= (float) 0.7;
+    private float stepDistance= (float) 0.6;
     private float refDirection;
 
     /**

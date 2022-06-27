@@ -10,17 +10,25 @@ import android.graphics.drawable.shapes.RectShape;
 
 import com.example.myapplication.particles.Particle;
 
+import java.util.LinkedList;
+import java.util.List;
+
 public class Cell {
 
     /**
         axis in canvas
      */
     public int id;
-    public int left;
-    public int top;
-    public int right;
-    public int bottom;
-    public int area;
+//    public int left;
+//    public int top;
+//    public int right;
+//    public int bottom;
+    public float left;
+    public float top;
+    public float right;
+    public float bottom;
+    public float area;
+    public List<ShapeDrawable> walls;
 
 
     /**
@@ -33,11 +41,16 @@ public class Cell {
      */
     public Cell(int id, float leftMeasure, float topMeasure, float rightMeasure, float bottomMeasure){
         this.id = id;
-        this.left = mapMeterToPixel(leftMeasure);
-        this.top = mapMeterToPixel(topMeasure);
-        this.right = mapMeterToPixel(rightMeasure);
-        this.bottom = mapMeterToPixel(bottomMeasure);
+//        this.left = mapMeterToPixel(leftMeasure);
+//        this.top = mapMeterToPixel(topMeasure);
+//        this.right = mapMeterToPixel(rightMeasure);
+//        this.bottom = mapMeterToPixel(bottomMeasure);
+        this.left = leftMeasure;
+        this.top = topMeasure;
+        this.right = rightMeasure;
+        this.bottom = bottomMeasure;
         this.area = (right-left)*(bottom-top);
+        this.walls = new LinkedList<>();
 //        System.out.println("left is "+ left+"\n");
 //        System.out.println("right is "+ right+"\n");
     }
@@ -54,7 +67,7 @@ public class Cell {
         return false;
     }
 
-    public boolean detectCoordinationInScope(int x, int y){
+    public boolean detectCoordinationInScope(float x, float y){
         if(x<right && x>left && y<bottom && y>top)
             return true;
         return false;
@@ -62,7 +75,7 @@ public class Cell {
 
     public void drawCell(Canvas canvas){
         ShapeDrawable drawable =  new ShapeDrawable(new RectShape());
-        drawable.setBounds(left,top,right,bottom);
+        drawable.setBounds(Cell.mapMeterToPixel(left),Cell.mapMeterToPixel(top),Cell.mapMeterToPixel(right),Cell.mapMeterToPixel(bottom));
         drawable.getPaint().setStyle(Paint.Style.STROKE);
         drawable.getPaint().setColor(Color.BLACK);
         drawable.draw(canvas);
@@ -73,7 +86,7 @@ public class Cell {
         Paint paint = new Paint();
         paint.setTextSize(8);
         paint.setTextAlign(Paint.Align.LEFT);
-        canvas.drawText("C"+id,(left+right)/2-6,(top+bottom)/2+5,paint);
+        canvas.drawText("C"+id,Cell.mapMeterToPixel((left+right)/2)-6,Cell.mapMeterToPixel((top+bottom)/2)+6,paint);
     }
 
 
@@ -85,7 +98,7 @@ public class Cell {
     public static int mapMeterToPixel(float measure){
 //        System.out.println("measure is "+ measure +"\n");
 //        System.out.println("int is "+ (int)measure +"\n");
-        return (int)(measure*12);
+        return (int)(measure*13);
     }
 
 

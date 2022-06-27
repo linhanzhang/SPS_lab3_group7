@@ -56,18 +56,16 @@ import com.google.android.gms.tasks.OnSuccessListener;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.List;
+import java.util.Date;
+import java.util.Calendar;
 
 public class LocalizationActivity extends AppCompatActivity implements SensorEventListener {
     private FusedLocationProviderClient fusedLocationClient;
     private SensorManager sensorManager;
     private Sensor rotationSensor;
-    private Sensor stepCounter;
     private Sensor accSensor;
-    private Sensor magSensor;
-    private Sensor gyroSensor;
     private Button start;
     private Button end;
-    private Button stepAdd;
     private TextView textStep;
     private TextView textOrientation;
     private TextView textCell;
@@ -78,16 +76,11 @@ public class LocalizationActivity extends AppCompatActivity implements SensorEve
     private ParticleCollection pc;
     private float stepDistance;
     private float refDirection;
-    private final float tolerateWindow = 35;
+    private final float tolerateWindow = 45;
     // Gravity for accelerometer data
     private float[] gravity = new float[3];
     // smoothed values
     private float[] smoothed = new float[3];
-    // sensor manager
-    private boolean ignore;
-    private int countdown;
-    private double prevY;
-    private double threshold = 0;
 
     private int calibratedDirection = 0;
 
@@ -95,24 +88,13 @@ public class LocalizationActivity extends AppCompatActivity implements SensorEve
 
     private boolean inStep;
 
-    private List<String[]> data;
-
-    float[] rotationMatrix = new float[9];
-    float[] magnetometerReading = new float[3];
-    //    float[] mGeoMags = new float[3];
-    float[] orientationAngles = new float[3];
-    float[] accelerometerReading = new float[3];
-
     private TextView degreeTV;
     private Boolean isLocationRetrieved = true;
-    private Double latitude;
-    private Double longitude;
-    private Double altitude;
+
     private static final int REQUEST_PERMISSION_FINE_LOCATION = 1;
-    int total = 0;
     private LocationRequest locationRequest;
     private LocationCallback locationCallback;
-    //  OnSuccessListener<Location> altitudeUpdate = null;
+    OnSuccessListener<Location> altitudeUpdate = null;
 
     // Create a constant to convert nanoseconds to seconds.
     private static final float NS2S = 1.0f / 1000000000.0f;
@@ -124,30 +106,10 @@ public class LocalizationActivity extends AppCompatActivity implements SensorEve
 
     public float height;
 
-
-    // CSVWriter csvWriter = null;
-    String csv = "/data/data/com.example.myapplication/cache/walk_sqrt.csv";
-
-
-    OnSuccessListener<Location> altitudeUpdate = new OnSuccessListener<Location>() {
-        @Override
-        public void onSuccess(Location location) {
-            // Got last known location. In some rare situations this can be null.
-            if (location != null) {
-                isLocationRetrieved = true;
-                total += 1;
-                latitude = Double.valueOf(location.getLatitude());
-                longitude = Double.valueOf(location.getLongitude());
-                altitude = Double.valueOf(location.getAltitude());
-              //  degreeTV.setText(total + ":" + Double.toString(altitude));
-//                System.out.println("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
-//                System.out.println(total + ":" + Double.toString(altitude));
-//                            magneticDeclination = CompassHelper.calculateMagneticDeclination(latitude, longitude, altitude);
-//                            textViewMagneticDeclination.setText(getString(R.string.magnetic_declination, magneticDeclination));
-            }
-        }
-    };
-
+    private int counter = 0;
+    private int countdown = 0;
+    private Calendar c1;
+    private long lastdateOne;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -159,14 +121,9 @@ public class LocalizationActivity extends AppCompatActivity implements SensorEve
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         rotationSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
         accSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-//        magSensor = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
-//        gyroSensor = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
-//                    rotationSensor = sensorManager.getDefaultSensor(Sensor.TYPE_D);
 
         sensorManager.registerListener(LocalizationActivity.this, rotationSensor, SensorManager.SENSOR_DELAY_FASTEST);
         sensorManager.registerListener(LocalizationActivity.this, accSensor, SensorManager.SENSOR_DELAY_GAME);
-//        sensorManager.registerListener(LocalizationActivity.this, magSensor, SensorManager.SENSOR_DELAY_NORMAL);
-//        sensorManager.registerListener(LocalizationActivity.this, gyroSensor, SensorManager.SENSOR_DELAY_NORMAL);
 
         degreeTV = (TextView) findViewById(R.id.DegreeTV);
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(LocalizationActivity.this);
@@ -197,35 +154,52 @@ public class LocalizationActivity extends AppCompatActivity implements SensorEve
         getLayoutCanvas();
 
         step = 0;
-        threshold = 0.18; // get from experiments
-        stepDistance = (float) 0.736;
-        textStep.setText("step:" + step);
+
+        /**
+         *  Default value
+         */
+        stepDistance = (float) 0.6;
+        refDirection = -110;
+
         pc = null;
-        refDirection = -53;
-
         sc = new StepCounter();
-        if (pc == null) {
-            Log.d("SET NULL", "pc set to null");
-        } else {
 
-        }
+//        // creating a Calendar object
+//        c1 = Calendar.getInstance();
+//        // set Month
+//        // MONTH starts with 0 i.e. ( 0 - Jan)
+//        c1.set(Calendar.MONTH, 6);
+//
+//        // set Date
+//        c1.set(Calendar.DATE, 24);
+//
+//        // set Year
+//        c1.set(Calendar.YEAR, 2022);
 
         locationRequest = locationRequest.create();
-        locationRequest.setInterval(5000);
+        locationRequest.setInterval(1000);
         locationRequest.setPriority(Priority.PRIORITY_HIGH_ACCURACY);
         locationCallback = new LocationCallback() {
             @Override
             public void onLocationResult(LocationResult locationResult) {
                 if (locationResult == null) {
-
+                    System.out.println("location result is empty");
                     return;
                 }
-//                System.out.println("********");
                 for (Location location : locationResult.getLocations()) {
-//                    System.out.println("0000000000");
                     height = (float) location.getAltitude();
                     degreeTV.setText("Height: " +String.format(".%1f",height));
 
+                }
+            }
+        };
+
+        OnSuccessListener<Location> altitudeUpdate = new OnSuccessListener<Location>() {
+            @Override
+            public void onSuccess(Location location) {
+                // Got last known location. In some rare situations this can be null.
+                if (location != null) {
+                    isLocationRetrieved = true;
                 }
             }
         };
@@ -235,15 +209,12 @@ public class LocalizationActivity extends AppCompatActivity implements SensorEve
 
             public void onTick(long millisUntilFinished) {
                 fusedLocationClient = LocationServices.getFusedLocationProviderClient(LocalizationActivity.this);
-                //  mTextField.setText("seconds remaining: " + millisUntilFinished / 1000);
-//                System.out.println("bbbbbbbbbbbbb");
                 getLocation();
 
 
             }
 
             public void onFinish() {
-                //  mTextField.setText("done!");
             }
         }.start();
 
@@ -251,10 +222,8 @@ public class LocalizationActivity extends AppCompatActivity implements SensorEve
         // get step distance from Calibration Activity
         Bundle bundle = getIntent().getExtras();
         if (bundle != null) {
-            //stepDistance = bundle.getFloat("stepDistance");
+            stepDistance = bundle.getFloat("stepDistance");
             refDirection = bundle.getFloat("refDirection");
-            //threshold = bundle.getDouble("threshold");
-            threshold = 0.38;
 
             for (String key : bundle.keySet()) {
                 Log.d("Bundle Debug locaa", key + " = \"" + bundle.get(key) + "\"");
@@ -290,19 +259,15 @@ public class LocalizationActivity extends AppCompatActivity implements SensorEve
                     Log.e(TAG, "here not null");
 
                 }
+
+                Date date = new Date();
+                lastdateOne = date.getTime();
             }
         });
 
         end.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-//                try {
-//                    csvWriter.writeAll(data);
-//                    csvWriter.close();
-//                } catch (IOException e) {
-//                } catch (IOException e) {
-//                    e.printStackTrace();
-//                }
                 sensorManager.unregisterListener(LocalizationActivity.this, rotationSensor);
                 sensorManager.unregisterListener(LocalizationActivity.this, accSensor);
 
@@ -318,110 +283,6 @@ public class LocalizationActivity extends AppCompatActivity implements SensorEve
     public void onSensorChanged(SensorEvent event) {
 
         if (pc != null) {
-//            switch (event.sensor.getType()) {
-//                case Sensor.TYPE_ACCELEROMETER:
-//                    System.arraycopy(event.values, 0, accelerometerReading, 0, 3);
-//                    break;
-//                case Sensor.TYPE_MAGNETIC_FIELD:
-//                    System.arraycopy(event.values, 0, magnetometerReading, 0, 3);
-//                    break;
-////                case Sensor.TYPE_ORIENTATION:
-////                    System.arraycopy(event.values, 0, mOldOreintation, 0, 3);
-////                    break;
-//
-//                default:
-//                    return;
-//            }
-
-//            if (event.sensor.getType() == Sensor.TYPE_GYROSCOPE){
-//                // This timestep's delta rotation to be multiplied by the current rotation
-//                // after computing it from the gyro sample data.
-//                System.out.println("!!!!!!");
-//                if (timestamp != 0) {
-//                    final float dT = (event.timestamp - timestamp) * NS2S;
-//                    // Axis of the rotation sample, not normalized yet.
-//                    float axisX = event.values[0];
-//                    float axisY = event.values[1];
-//                    float axisZ = event.values[2];
-//
-//                    // Calculate the angular speed of the sample
-//                    float omegaMagnitude = (float) Math.sqrt(axisX*axisX + axisY*axisY + axisZ*axisZ);
-//
-//                    // Normalize the rotation vector if it's big enough to get the axis
-//                    // (that is, EPSILON should represent your maximum allowable margin of error)
-//                    if (omegaMagnitude > EPSILON) {
-//                        axisX /= omegaMagnitude;
-//                        axisY /= omegaMagnitude;
-//                        axisZ /= omegaMagnitude;
-//                    }
-//
-//                    // Integrate around this axis with the angular speed by the timestep
-//                    // in order to get a delta rotation from this sample over the timestep
-//                    // We will convert this axis-angle representation of the delta rotation
-//                    // into a quaternion before turning it into the rotation matrix.
-//                    float thetaOverTwo = omegaMagnitude * dT / 2.0f;
-//                    float sinThetaOverTwo = (float)Math.sin(thetaOverTwo);
-//                    float cosThetaOverTwo = (float)Math.cos(thetaOverTwo);
-//                    deltaRotationVector[0] = sinThetaOverTwo * axisX;
-//                    deltaRotationVector[1] = sinThetaOverTwo * axisY;
-//                    deltaRotationVector[2] = sinThetaOverTwo * axisZ;
-//                    deltaRotationVector[3] = cosThetaOverTwo;
-//                }
-//                timestamp = event.timestamp;
-//                float[] deltaRotationMatrix = new float[9];
-//                float[] gyroscopeOrientation = new float[3];
-//                SensorManager.getRotationMatrixFromVector(deltaRotationMatrix, deltaRotationVector);
-//                // User code should concatenate the delta rotation we computed with the current rotation
-//                // in order to get the updated rotation.
-//                // rotationCurrent = rotationCurrent * deltaRotationMatrix;
-//
-//                currentRotationMatrix = matrixMultiplication(
-//                        currentRotationMatrix,
-//                        deltaRotationMatrix);
-//
-//                SensorManager.getOrientation(currentRotationMatrix,
-//                        gyroscopeOrientation);
-//
-//                float direction = (float) Math.toDegrees(gyroscopeOrientation[0]);
-//
-//              //  textOrientation.setText(String.valueOf(direction)+String.valueOf(gyroscopeOrientation));
-//            }
-
-
-//                if (event.sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD) {
-////                float[] rotationMatrix = new float[9];
-////                float[] mGravs = new float[3];
-////                float[] mGeoMags = new float[3];
-////                float[] orientationAngles = new float[3];
-////                float[] accelerometerReading = new float[3];
-//                boolean succeed = SensorManager.getRotationMatrix(rotationMatrix, null, accelerometerReading, magnetometerReading);
-//                if (succeed) {
-//                    //   Log.d("succeed","succeed");
-//                } else {
-//                    Log.d("fail", "fail");
-//                }
-//
-//                SensorManager.getOrientation(rotationMatrix, orientationAngles);
-//                float direction = (float) Math.toDegrees(orientationAngles[0]);
-//             //   textOrientation.setText(String.valueOf(direction));
-//            }
-//
-//
-//            if (event.sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD) {
-//                boolean succeed = SensorManager.getRotationMatrix(rotationMatrix, null, accelerometerReading, magnetometerReading);
-//                SensorManager.getOrientation(rotationMatrix, orientationAngles);
-//                float direction = (float) Math.toDegrees(orientationAngles[0]);
-//                // double dir = (orientationAngles[0]*100) / 1.722 ;
-//                //  Log.d("====","====");
-//           //     textOrientation.setText(String.valueOf(direction) + " " + String.valueOf(calibratedDirection));
-//            }
-
-//            if(!executed && event.sensor.getType() == Sensor.TYPE_ROTATION_VECTOR){
-//
-//               // float[] orientations = new float[3];
-//                SensorManager.getRotationMatrixFromVector(currentRotationMatrix, event.values);
-//                executed = true;
-//            }
 
             if(event.sensor.getType() == Sensor.TYPE_ROTATION_VECTOR){
                 float[] rotationMatrix = new float[16];
@@ -444,24 +305,53 @@ public class LocalizationActivity extends AppCompatActivity implements SensorEve
                 gravity[1] = smoothed[1];
                 gravity[2] = smoothed[2];
 
+                countdown ++;
+
                 float currentvectorSum = sc.getAccelRes(smoothed);
 
-                if (currentvectorSum < 9.0 && inStep == false) {  //para
-                    inStep = true;
-                }
-                if (currentvectorSum > 10.5 && inStep == true) {   //para
+//                if (currentvectorSum < 8.5 && inStep == false) {  //para 9.0
+//                    inStep = true;
+//                }
+//                if (currentvectorSum > 0.6 && inStep == true && countdown >50) {   //para 10.5
+//                    inStep = false;
+//                    step++;
+//                    countdown = 0;
+
+                // creating a Calendar object
+//                c1 = Calendar.getInstance();
+//                // set Month
+//                // MONTH starts with 0 i.e. ( 0 - Jan)
+//                c1.set(Calendar.MONTH, 6);
+//
+//                // set Date
+//                c1.set(Calendar.DATE, 24);
+//
+//                // set Year
+//                c1.set(Calendar.YEAR, 2022);
+
+                Date date = new Date();
+
+//                System.out.println(date.getTime());
+                if (currentvectorSum > 3.5 && date.getTime() - lastdateOne > 600) {   //para 10.5 //para= 4
                     inStep = false;
                     step++;
+                    lastdateOne = date.getTime();
+                    System.out.println(lastdateOne);
+
+//                    if(c1.getTime().getTime() - lastdateOne > 500){
+//
+//                    }
+                  //  countdown = 0;
 
                     // restart rotation sensor every 10 steps
                     if(step % 10 == 0){
                         reStartRotationSensor();
                     }
-                    //Log.d("TAG_ACCELEROMETER", "\t" + numSteps);
+
                     textStep.setText("Step: " + step);
                     getLayoutCanvas();
 
-                    pc.moveParticles(canvas, (int) Cell.mapMeterToPixel(stepDistance), calibratedDirection,height);  //ATTENTION: to be changed
+                    pc.moveParticles(canvas, stepDistance, calibratedDirection,height);  //ATTENTION: to be changed
                     int predictCell = pc.getCellwithMaxWeight();
                     textCell.setText("cell " + String.valueOf(predictCell));
                 }
@@ -483,8 +373,8 @@ public class LocalizationActivity extends AppCompatActivity implements SensorEve
      */
 
     private void getLayoutCanvas() {
-        ImageView canvasView = (ImageView) findViewById(R.id.canvas);
-        Bitmap blankBitmap = Bitmap.createBitmap(340, 200, Bitmap.Config.ARGB_8888);
+        ImageView canvasView = (ImageView) findViewById(R.id.canvas); // w 340 h 200
+        Bitmap blankBitmap = Bitmap.createBitmap(360, 200, Bitmap.Config.ARGB_8888);
         canvas = new Canvas(blankBitmap);
         canvas.setDrawFilter(new PaintFlagsDrawFilter(0, Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG));
         canvasView.setImageBitmap(blankBitmap);
@@ -507,8 +397,9 @@ public class LocalizationActivity extends AppCompatActivity implements SensorEve
         if (direction < refDirection) {
             direction += 360;
         }
+       // calibratedDirection = (int) (direction-refDirection);
 
-        if (direction > refDirection - tolerateWindow && direction < refDirection + tolerateWindow) {
+        if (direction > refDirection + 360 - tolerateWindow || direction < refDirection + tolerateWindow) {
             calibratedDirection = 0;
         } else if (direction > refDirection + 90 - tolerateWindow && direction < refDirection + 90 + tolerateWindow) {
             calibratedDirection = 90;
@@ -518,6 +409,11 @@ public class LocalizationActivity extends AppCompatActivity implements SensorEve
             calibratedDirection = 270;
         }
         //return calibratedDirection;
+        counter ++;
+        if(counter == 100) {
+            System.out.println("direction: " + direction + "ref: " + refDirection + "calibrated: " + calibratedDirection);
+            counter = 0;
+        }
     }
 
     protected float[] lowPassFilter(float[] input, float[] output) {
@@ -566,7 +462,6 @@ public class LocalizationActivity extends AppCompatActivity implements SensorEve
     }
 
     private void startLocationUpdates() {
-        System.out.println("))))))))");
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             // TODO: Consider calling
             //    ActivityCompat#requestPermissions
@@ -577,6 +472,7 @@ public class LocalizationActivity extends AppCompatActivity implements SensorEve
             // for ActivityCompat#requestPermissions for more details.
             return;
         }
+        System.out.println("start location updates");
         fusedLocationClient.requestLocationUpdates(locationRequest,
                 locationCallback,
                 Looper.getMainLooper());
