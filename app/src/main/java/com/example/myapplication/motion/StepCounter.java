@@ -13,6 +13,12 @@ public class StepCounter {
         oldData = null;
     }
 
+    /**
+     *  This function is not used
+     * @param curretACCEL
+     * @return
+     */
+
     public boolean isStepDetected (float[] curretACCEL)
     {
 
@@ -43,12 +49,14 @@ public class StepCounter {
 
     }
 
-    public float getAccelRes (float[] curretACCEL)
+    public static float getAccelRes (float[] curretACCEL)
     {
-        float res = (float) Math.sqrt((Math.pow(curretACCEL[0], 2))
-                + (Math.pow(curretACCEL[1], 2))
-                + (Math.pow(curretACCEL[2], 2)));
-        //System.out.println(res);
+//        float res = (float) Math.sqrt((Math.pow(curretACCEL[0], 2))
+//                + (Math.pow(curretACCEL[1], 2))
+//                + (Math.pow(curretACCEL[2], 2)));
+
+        float res = (float) Math.pow((curretACCEL[2]-9.8),2);
+       // System.out.println("Res is -------> "+res);
         return res;
     }
 }
